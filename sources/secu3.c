@@ -63,16 +63,16 @@ struct ecudata_t edat;
 void control_engine_units(struct ecudata_t *d)
 {
  //реализация функции ЭПХХ.
- idlecon_control(d);
+// idlecon_control(d);
 
  //управление блокировкой стартера
- starter_control(d);
+ //starter_control(d);
 
  //управление электро вентилятором охлаждения двигателя, при условии что ДТОЖ присутствует в системе
- vent_control(d);
+// vent_control(d);
 
  //Управление ЭМР (экономайзер мощностных режимов)
- fuelecon_control(d);
+ //fuelecon_control(d);
 }
 
 /**Initialization of variables and data structures 
@@ -270,10 +270,10 @@ MAIN()
 
    //Ограничиваем быстрые изменения УОЗ, он не может изменится больше чем на определенную величину
    //за один рабочий цикл. В режиме пуска фильтр УОЗ отключен.
-   if (EM_START == edat.engine_mode)
+  // if (EM_START == edat.engine_mode)
     edat.curr_angle = advance_angle_inhibitor_state = calc_adv_ang;
-   else
-    edat.curr_angle = advance_angle_inhibitor(calc_adv_ang, &advance_angle_inhibitor_state, edat.param.angle_inc_spead, edat.param.angle_dec_spead);
+  // else
+  //  edat.curr_angle = advance_angle_inhibitor(calc_adv_ang, &advance_angle_inhibitor_state, edat.param.angle_inc_spead, edat.param.angle_dec_spead);
 
    //----------------------------------------------
    if (edat.param.knock_use_knock_channel)
