@@ -190,51 +190,65 @@ typedef struct
 
 /**Variable. State data for idling regulator */
 idlregul_state_t idl_prstate;
+idlregul_state_t idl_enable;
 
 //сброс состояния РХХ
 void idling_regulator_init(void)
 {
  idl_prstate.output_state = 0;
+ idl_enable.output_state = 0;
 }
 
 //Пропорциональный регулятор для регулирования оборотов ХХ углом опережения зажигания
 // Возвращает значение угла опережения в целом виде * 32.
 int16_t idling_pregulator(struct ecudata_t* d, volatile s_timer8_t* io_timer)
 {
- int16_t error,factor;
- //зона "подхвата" регулятора при возвращени двигателя из рабочего режима в ХХ
- uint16_t capture_range = 200;
+int16_t error,factor,idl_coolant_rpm;
+//зона "подхвата" регулятора при возвращени двигателя из рабочего режима в ХХ
+uint16_t capture_range = 100;
 
- //если PXX отключен или обороты значительно выше от нормальных холостых оборотов
- // или двигатель не прогрет то выходим  с нулевой корректировкой
- if (!d->param.idl_regul || (d->sens.frequen >(d->param.idling_rpm + capture_range))
-    || (d->sens.temperat < TEMPERATURE_MAGNITUDE(70) && d->param.tmp_use))
-  return 0;
+//вычисляем добавку к целевым оборотам по графику УОЗ от Т
+idl_coolant_rpm = coolant_function(d)/32 * 50;
 
- //вычисляем значение ошибки, ограничиваем ошибку (если нужно), а также, если мы в зоне
- //нечувствительности, то используем расчитанную ранее коррекцию.
- error = d->param.idling_rpm - d->sens.frequen;
- restrict_value_to(&error, -200, 200);
- if (abs(error) <= d->param.MINEFR)
+//если PXX отключен или обороты значительно выше от нормальных холостых оборотов
+// или обороты не упали ниже целевые +10 первый раз после выхода с рабочего режима , то выходим  с нулевой корректировкой
+
+  if ((d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm + 10)) && !idl_enable.output_state) 
+    return 0;
+  else 
+    idl_enable.output_state = 1;
+    
+  if (!d->param.idl_regul || (d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm + capture_range)))
+    return 0;
+
+//вычисляем значение ошибки, ограничиваем ошибку (если нужно), а также, если мы в зоне
+//нечувствительности, то используем расчитанную ранее коррекцию.
+error = d->param.idling_rpm + idl_coolant_rpm - d->sens.frequen;
+restrict_value_to(&error, -200, 100);
+if (abs(error) <= d->param.MINEFR)
   return idl_prstate.output_state;
 
- //выбираем необходимый коэффициент регулятора, в зависимости от знака ошибки
- if (error > 0)
+//выбираем необходимый коэффициент регулятора, в зависимости от знака ошибки
+if (error > 0)
   factor = d->param.ifac1;
- else
+else
   factor = d->param.ifac2;
 
- //изменяем значение коррекции только по таймеру idle_period_time_counter
- if (s_timer_is_action(*io_timer))
- {
-  s_timer_set(*io_timer,IDLE_PERIOD_TIME_VALUE);
-  idl_prstate.output_state = idl_prstate.output_state + (error * factor) / 4;
- }
- //ограничиваем коррекцию нижним и верхним пределами регулирования
- restrict_value_to(&idl_prstate.output_state, d->param.idlreg_min_angle, d->param.idlreg_max_angle);
-
- return idl_prstate.output_state;
+//изменяем значение коррекции только по таймеру idle_period_time_counter
+//if (s_timer_is_action(*io_timer))
+{
+  //s_timer_set(*io_timer,IDLE_PERIOD_TIME_VALUE);
+   
+// функция реализации П регулятора   
+  idl_prstate.output_state = (error * factor) / 4;
 }
+//ограничиваем коррекцию нижним и верхним пределами регулирования
+restrict_value_to(&idl_prstate.output_state, d->param.idlreg_min_angle, d->param.idlreg_max_angle);
+
+return idl_prstate.output_state;
+}
+
+
 
 //Нелинейный фильтр ограничивающий скорость изменения УОЗ на переходных режимах двигателя
 //new_advance_angle - новое значение УОЗ
