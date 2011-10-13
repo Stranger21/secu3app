@@ -203,7 +203,7 @@ void idling_regulator_init(void)
 // Возвращает значение угла опережения в целом виде * 32.
 int16_t idling_pregulator(struct ecudata_t* d, volatile s_timer8_t* io_timer)
 {
-int16_t error,factor,idl_coolant_rpm;
+int16_t error,factor,idl_coolant_rpm,iState_error;
 //зона "подхвата" регулятора при возвращени двигателя из рабочего режима в ХХ
 uint16_t capture_range = 100;
 
@@ -212,12 +212,15 @@ idl_coolant_rpm = coolant_function(d)/32 * 50;
 
 //если PXX отключен или обороты значительно выше от нормальных холостых оборотов
 // или обороты не упали ниже целевые +10 первый раз после выхода с рабочего режима , то выходим  с нулевой корректировкой
+//также обнуляем сумму интегрального регулятора при первом разрешенном входе в РХХ
 
   if ((d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm + 10)) && !idl_enable.output_state) 
     return 0;
   else 
-    idl_enable.output_state = 1;
-    
+  {idl_enable.output_state = 1;
+   iState_error = 0;
+  
+  }
   if (!d->param.idl_regul || (d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm + capture_range)))
     return 0;
 
@@ -225,9 +228,14 @@ idl_coolant_rpm = coolant_function(d)/32 * 50;
 //нечувствительности, то используем расчитанную ранее коррекцию.
 error = d->param.idling_rpm + idl_coolant_rpm - d->sens.frequen;
 restrict_value_to(&error, -200, 100);
+//Складываем ошибки для реализации интегрального регулятора
+iState_error += error;
 if (abs(error) <= d->param.MINEFR)
+{
+  // если в зоне нечувствительности , то обнуляем сумму интегрального регулятора
+  iState_error = 0;
   return idl_prstate.output_state;
-
+}
 //выбираем необходимый коэффициент регулятора, в зависимости от знака ошибки
 if (error > 0)
   factor = d->param.ifac1;
@@ -239,8 +247,8 @@ else
 {
   //s_timer_set(*io_timer,IDLE_PERIOD_TIME_VALUE);
    
-// функция реализации П регулятора   
-  idl_prstate.output_state = (error * factor) / 4;
+// функция реализации ПИ регулятора   
+  idl_prstate.output_state = (error * factor) / 4 + iState_error / 4000;
 }
 //ограничиваем коррекцию нижним и верхним пределами регулирования
 restrict_value_to(&idl_prstate.output_state, d->param.idlreg_min_angle, d->param.idlreg_max_angle);
