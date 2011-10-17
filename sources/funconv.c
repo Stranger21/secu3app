@@ -191,6 +191,7 @@ typedef struct
 /**Variable. State data for idling regulator */
 idlregul_state_t idl_prstate;
 idlregul_state_t idl_enable;
+idlregul_state_t idl_coolant_rpm;
 
 //сброс состояния РХХ
 void idling_regulator_init(void)
@@ -203,33 +204,34 @@ void idling_regulator_init(void)
 // Возвращает значение угла опережения в целом виде * 32.
 int16_t idling_pregulator(struct ecudata_t* d, volatile s_timer8_t* io_timer)
 {
-int16_t error,factor,idl_coolant_rpm,iState_error;
+int16_t error,factor,iState_error;
 //зона "подхвата" регулятора при возвращени двигателя из рабочего режима в ХХ
 uint16_t capture_range = 100;
 
 //вычисляем добавку к целевым оборотам по графику УОЗ от Т
-idl_coolant_rpm = coolant_function(d)/32 * 50;
-
+idl_coolant_rpm.output_state = coolant_function(d)/32 * 50;
+d->param.user_var1 = idl_coolant_rpm.output_state;
 //если PXX отключен или обороты значительно выше от нормальных холостых оборотов
 // или обороты не упали ниже целевые +10 первый раз после выхода с рабочего режима , то выходим  с нулевой корректировкой
 //также обнуляем сумму интегрального регулятора при первом разрешенном входе в РХХ
 
-  if ((d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm + 10)) && !idl_enable.output_state) 
+  if ((d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm.output_state + 10)) && !idl_enable.output_state) 
     return 0;
   else 
   {idl_enable.output_state = 1;
    iState_error = 0;
   
   }
-  if (!d->param.idl_regul || (d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm + capture_range)))
+  if (!d->param.idl_regul || (d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm.output_state + capture_range)))
     return 0;
 
 //вычисляем значение ошибки, ограничиваем ошибку (если нужно), а также, если мы в зоне
 //нечувствительности, то используем расчитанную ранее коррекцию.
-error = d->param.idling_rpm + idl_coolant_rpm - d->sens.frequen;
+error = d->param.idling_rpm + idl_coolant_rpm.output_state - d->sens.frequen;
 restrict_value_to(&error, -200, 100);
 //Складываем ошибки для реализации интегрального регулятора
 iState_error += error;
+d->param.user_var2 = iState_error;
 if (abs(error) <= d->param.MINEFR)
 {
   // если в зоне нечувствительности , то обнуляем сумму интегрального регулятора

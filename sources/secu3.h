@@ -34,7 +34,7 @@
 #define FORCE_MEASURE_TIMEOUT_VALUE   25    //!< timeout value used to perform measurements when engine is stopped
 #define CE_CONTROL_STATE_TIME_VALUE   50    //!< used for CE (flashing)
 #define ENGINE_ROTATION_TIMEOUT_VALUE 15    //!< timeout value used to determine that engine is stopped
-#define IDLE_PERIOD_TIME_VALUE        25    //!< used by idling regulator
+#define IDLE_PERIOD_TIME_VALUE        50    //!< used by idling regulator
 
 /**Describes all system's inputs - theirs derivative and integral magnitudes
  * описывает все входы системы - их производные и интегральные величины

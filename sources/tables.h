@@ -211,7 +211,11 @@ typedef struct params_t
   /**Контрольная сумма данных этой структуры (для проверки корректности данных после считывания из EEPROM)
    * CRC of data of this structure (for checking correctness of data after loading from EEPROM) */
   uint16_t crc;
-
+  
+  
+  uint16_t user_var1;
+  uint16_t user_var2;
+  
 }params_t;
 
 /**Описывает все данные находящиеся в прошивке 

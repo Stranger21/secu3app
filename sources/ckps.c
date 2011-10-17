@@ -32,6 +32,7 @@
 #include "bitmask.h"
 #include "ckps.h"
 #include "magnitude.h"
+#include "starter.h"
 
 #include "secu3.h"
 #include "knock.h"
@@ -73,6 +74,13 @@
 /** Used to indicate that none from ignition channels are selected
  * (используется для указания того что ни один канал зажигания не выбран) */
 #define CKPS_CHANNEL_MODENA  255
+
+//используеться для задания фронтов выходного сигнала имитации ДХ скважность 3.33 , начало в УОЗ=6
+#define CKPS_DX_OUT_COG1 (ckps.cogs_btdc - 1)
+#define CKPS_DX_OUT_COG2 (ckps.cogs_btdc + 8)
+#define CKPS_DX_OUT_COG3 (ckps.cogs_btdc + 29)
+#define CKPS_DX_OUT_COG4 (ckps.cogs_btdc + 38)
+
 
 /** Flags */
 typedef struct
@@ -600,6 +608,14 @@ void process_ckps_cogs(void)
  uint16_t diff;
  uint8_t i, timsk_sv = TIMSK;
 
+//вывод имитатора ДХ используем выход стартера , функции блокировки выключены должны быть
+if (ckps.cog == CKPS_DX_OUT_COG1) starter_set_blocking_state(1); 
+if (ckps.cog == CKPS_DX_OUT_COG2) starter_set_blocking_state(0);
+if (ckps.cog == CKPS_DX_OUT_COG3) starter_set_blocking_state(1);
+if (ckps.cog == CKPS_DX_OUT_COG4) starter_set_blocking_state(0);
+
+ 
+ 
  //-----------------------------------------------------
  //Software PWM is very sensitive even to small delays. So, we need to allow OCF2 and TOV2
  //interrupts occur during processing of this handler.
