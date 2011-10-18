@@ -76,10 +76,10 @@
 #define CKPS_CHANNEL_MODENA  255
 
 //используеться для задания фронтов выходного сигнала имитации ДХ скважность 3.33 , начало в УОЗ=6
-#define CKPS_DX_OUT_COG1 (ckps.cogs_btdc - 1)
-#define CKPS_DX_OUT_COG2 (ckps.cogs_btdc + 8)
-#define CKPS_DX_OUT_COG3 (ckps.cogs_btdc + 29)
-#define CKPS_DX_OUT_COG4 (ckps.cogs_btdc + 38)
+#define CKPS_DX_OUT_COG1 (ckps.cogs_btdc - 10)
+#define CKPS_DX_OUT_COG2 (ckps.cogs_btdc - 1)
+#define CKPS_DX_OUT_COG3 (ckps.cogs_btdc + 20)
+#define CKPS_DX_OUT_COG4 (ckps.cogs_btdc + 29)
 
 
 /** Flags */
@@ -609,6 +609,7 @@ void process_ckps_cogs(void)
  uint8_t i, timsk_sv = TIMSK;
 
 //вывод имитатора ДХ используем выход стартера , функции блокировки выключены должны быть
+
 if (ckps.cog == CKPS_DX_OUT_COG1) starter_set_blocking_state(1); 
 if (ckps.cog == CKPS_DX_OUT_COG2) starter_set_blocking_state(0);
 if (ckps.cog == CKPS_DX_OUT_COG3) starter_set_blocking_state(1);

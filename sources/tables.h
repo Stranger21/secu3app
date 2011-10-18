@@ -213,8 +213,8 @@ typedef struct params_t
   uint16_t crc;
   
   
-  uint16_t user_var1;
-  uint16_t user_var2;
+ // uint16_t user_var1;
+  //uint16_t user_var2;
   
 }params_t;
 

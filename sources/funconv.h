@@ -88,6 +88,9 @@ int16_t coolant_function(struct ecudata_t* d);
  */
 uint8_t knock_attenuator_function(struct ecudata_t* d);
 
+extern uint16_t user_var1;
+extern uint16_t user_var2;
+
 /**Initialization of idling regulator's data structures */
 void idling_regulator_init(void);
 
