@@ -95,5 +95,6 @@ typedef struct ecudata_t
  uint8_t engine_mode;                    //!< Current engine mode(start, idle, work) (текущий режим двигателя (пуск, ХХ, нагрузка))
 }ecudata_t;
 
+extern struct ecudata_t edat;
 
 #endif  //_SECU3_H_

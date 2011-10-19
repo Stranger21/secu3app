@@ -47,6 +47,10 @@ PGM_DECLARE(int16_t f_slots_ranges[16]) = {600,720,840,990,1170,1380,1650,1950,2
 /**Array which contains RPM axis's grid sizes */
 PGM_DECLARE(int16_t f_slots_length[15]) = {120,120,150,180, 210, 270, 300, 360, 420, 480, 630, 690, 840, 990, 1140};
 
+//массив данных оборотов от температуры , шаг 10 , начало -30
+int16_t idl_collant_rpm_t[16] = {1200,1200,1200,1200,1150, 1050, 1025, 1000, 975, 950, 925, 850, 800, 800, 800, 800};
+
+
 // Функция билинейной интерполяции (поверхность)
 // x, y - значения аргументов интерполируемой функции
 // a1,a2,a3,a4 - значение функции в узлах интерполяции (углы четырехугольника)
@@ -73,6 +77,28 @@ int16_t simple_interpolation(int16_t x, int16_t a1, int16_t a2, int16_t x_s, int
  return ((a1 * 16) + (((int32_t)(a2 - a1) * 16) * (x - x_s)) / x_l);
 }
 
+//Реализует функцию выборки целевых оборотов для РХХ из массива оборотов по температуре
+
+int16_t idl_coolant_rpm_function(struct ecudata_t* d)
+{
+int16_t i, i1, t = d->sens.temperat;
+
+if (!d->param.tmp_use)
+  return d->param.idling_rpm;   //обороты хх = тем что заданы в окне оборотов РХХ, если блок неукомплектован ДТОЖ-ом
+
+//-30 - минимальное значение температуры
+if (t < TEMPERATURE_MAGNITUDE(-30))
+  t = TEMPERATURE_MAGNITUDE(-30);
+
+//10 - шаг между узлами интерполяции по температуре
+i = (t - TEMPERATURE_MAGNITUDE(-30)) / TEMPERATURE_MAGNITUDE(10);
+
+if (i >= 15) i = i1 = 15;
+else i1 = i + 1;
+
+return simple_interpolation(t, idl_collant_rpm_t[i], idl_collant_rpm_t[i1],
+(i * TEMPERATURE_MAGNITUDE(10)) + TEMPERATURE_MAGNITUDE(-30), TEMPERATURE_MAGNITUDE(10));
+}
 
 // Реализует функцию УОЗ от оборотов для холостого хода
 // Возвращает значение угла опережения в целом виде * 32. 2 * 16 = 32.
@@ -210,27 +236,28 @@ int16_t error,factor,iState_error;
 //зона "подхвата" регулятора при возвращени двигателя из рабочего режима в ХХ
 uint16_t capture_range = 100;
 
-//вычисляем добавку к целевым оборотам по графику УОЗ от Т
-idl_coolant_rpm.output_state = coolant_function(d)/32 * 50;
+//вычисляем целевые обороты , по массиву Обороты vs температура
+idl_coolant_rpm.output_state = idl_coolant_rpm_function(d)/16;
 user_var1 = idl_coolant_rpm.output_state;
+
 //если PXX отключен или обороты значительно выше от нормальных холостых оборотов
 // или обороты не упали ниже целевые +10 первый раз после выхода с рабочего режима , то выходим  с нулевой корректировкой
 //также обнуляем сумму интегрального регулятора при первом разрешенном входе в РХХ
 
-  if ((d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm.output_state + 10)) && !idl_enable.output_state) 
+  if ((d->sens.frequen >(idl_coolant_rpm.output_state + 10)) && !idl_enable.output_state) 
     return 0;
   else 
   {idl_enable.output_state = 1;
    iState_error = 0;
   
   }
-  if (!d->param.idl_regul || (d->sens.frequen >(d->param.idling_rpm + idl_coolant_rpm.output_state + capture_range)))
+  if (!d->param.idl_regul || (d->sens.frequen >(idl_coolant_rpm.output_state + capture_range)))
     return 0;
 
 //вычисляем значение ошибки, ограничиваем ошибку (если нужно), а также, если мы в зоне
 //нечувствительности, то используем расчитанную ранее коррекцию.
 
-error = d->param.idling_rpm + idl_coolant_rpm.output_state - d->sens.frequen;
+error = idl_coolant_rpm.output_state - d->sens.frequen;
 
 restrict_value_to(&error, -200, 100);
 //Складываем ошибки для реализации интегрального регулятора
