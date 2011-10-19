@@ -76,10 +76,10 @@
 #define CKPS_CHANNEL_MODENA  255
 
 //используеться для задания фронтов выходного сигнала имитации ДХ скважность 3.33 , начало в УОЗ=6
-#define CKPS_DX_OUT_COG1 (edat.param.starter_off - 10-60)
-#define CKPS_DX_OUT_COG2 (edat.param.starter_off - 1-60)
-#define CKPS_DX_OUT_COG3 (edat.param.starter_off + 20-60)
-#define CKPS_DX_OUT_COG4 (edat.param.starter_off + 29-60)
+#define CKPS_DX_OUT_COG1 (edat.param.starter_off + ckps.cogs_btdc - 10-60)
+#define CKPS_DX_OUT_COG2 (edat.param.starter_off + ckps.cogs_btdc - 1-60)
+#define CKPS_DX_OUT_COG3 (edat.param.starter_off + ckps.cogs_btdc + 20-60)
+#define CKPS_DX_OUT_COG4 (edat.param.starter_off + ckps.cogs_btdc + 29-60)
 
 
 /** Flags */
