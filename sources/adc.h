@@ -30,14 +30,27 @@
 
 #include <stdint.h>
 
+extern uint16_t user_var3;
+
 /**одна дискрета АЦП в вольтах */
 #define ADC_DISCRETE            0.0025
 
 /**наклон прямой датчика температуры вольт/градус */
 #define TSENS_SLOPP             0.01
 
+/**наклон прямой датчика температуры вольт/градус */
+#define TSENS_SLOPP             0.01
+
+#ifndef THERMISTOR_CS
 /**напряжение на выходе датчика температуры при 0 градусов цельсия */
 #define TSENS_ZERO_POINT        2.73
+#else
+/**напряжение при минимальной температуре на резистивном датчике температуре */
+#define TSENS_V_TMIN            4.37
+
+/**шаг по напряжению для таблицы темперутр */
+#define TSENS_STEP              0.27
+#endif
 
 /**константа для выбора источника опорного напряжения */
 #define ADC_VREF_TYPE           0xC0
@@ -125,10 +138,21 @@ uint16_t map_adc_to_kpa(int16_t adcvalue, int16_t offset, int16_t gradient);
  */
 uint16_t ubat_adc_to_v(int16_t adcvalue);
 
+#ifndef THERMISTOR_CS
+
 /**переводит значение АЦП в физическую величину - температура
  * \param adcvalue значение в дискретах АЦП
  * \return физическая величина * TEMP_PHYSICAL_MAGNITUDE_MULTIPLAYER
  */
 int16_t temp_adc_to_c(int16_t adcvalue);
-
+#else
+/**переводит значение АЦП в физическую величину - температура
+ *для резистивного датчика
+ * \param start значение напряжения в минимальной температуре в дискретах АЦП
+ * \param step значение шага по напряжению в таблице , в дискретах АЦП
+ * \param adcvalue значение в дискретах АЦП
+ * \return физическая величина * TEMP_PHYSICAL_MAGNITUDE_MULTIPLAYER
+ */
+int16_t thermistor_lookup(uint16_t start, uint16_t step, uint16_t adcvalue);
+#endif
 #endif //_ADC_H_

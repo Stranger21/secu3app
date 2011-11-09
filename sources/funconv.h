@@ -90,6 +90,7 @@ uint8_t knock_attenuator_function(struct ecudata_t* d);
 
 extern uint16_t user_var1;
 extern uint16_t user_var2;
+//extern uint16_t user_var3;
 
 /**Initialization of idling regulator's data structures */
 void idling_regulator_init(void);

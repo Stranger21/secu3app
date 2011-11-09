@@ -36,6 +36,7 @@
 #include "uart.h"
 #include "ufcodes.h"
 #include "funconv.h"
+#include "adc.h"
 
 //Mega64 compatibility
 #ifdef _PLATFORM_M64_
@@ -469,7 +470,7 @@ void uart_send_packet(struct ecudata_t* d, uint8_t send_mode)
   case DBGVAR_DAT:
    build_i16h(user_var1);
    build_i16h(user_var2);
-   build_i16h(/*Your variable here*/0);
+   build_i16h(user_var3);
    build_i16h(/*Your variable here*/0);
    break;
 #endif

@@ -33,6 +33,7 @@
 #include "bitmask.h"
 #include "magnitude.h"
 #include "secu3.h"
+#include "funconv.h"
 
 /**номер канала используемого для ДАД */
 #define ADCI_MAP                2
@@ -44,6 +45,8 @@
 #define ADCI_KNOCK              3
 /**заглушка, используется для ADCI_KNOCK чтобы сформировать задержку */
 #define ADCI_STUB               4
+
+uint16_t user_var3;
 
 /**Cтруктура данных состояния АЦП */
 typedef struct
@@ -234,9 +237,43 @@ uint16_t ubat_adc_to_v(int16_t adcvalue)
  return adcvalue;
 }
 
+#ifndef THERMISTOR_CS
+
 int16_t temp_adc_to_c(int16_t adcvalue)
 {
  if (adcvalue < 0)
   adcvalue = 0;
+user_var3 = adcvalue;
  return (adcvalue - ((int16_t)((TSENS_ZERO_POINT / ADC_DISCRETE)+0.5)) );
 }
+#else
+//алгоритм обработки резистивного датчика температуры
+
+
+#define THERMISTOR_LOOKUP_TABLE_SIZE 16
+
+//таблица значений температуры с шагом по напряжению
+PGM_DECLARE(int16_t therm_cs_temperature[THERMISTOR_LOOKUP_TABLE_SIZE]) = 
+{TEMPERATURE_MAGNITUDE(-27.9),TEMPERATURE_MAGNITUDE(-13.6),TEMPERATURE_MAGNITUDE(-3.7),TEMPERATURE_MAGNITUDE(2.4),
+TEMPERATURE_MAGNITUDE(8.5),TEMPERATURE_MAGNITUDE(14.1),TEMPERATURE_MAGNITUDE(19.5),TEMPERATURE_MAGNITUDE(24.7),
+TEMPERATURE_MAGNITUDE(30.0),TEMPERATURE_MAGNITUDE(35.6),TEMPERATURE_MAGNITUDE(41.4),TEMPERATURE_MAGNITUDE(47.8),
+TEMPERATURE_MAGNITUDE(55.8),TEMPERATURE_MAGNITUDE(65.5),TEMPERATURE_MAGNITUDE(78.1),TEMPERATURE_MAGNITUDE(100.0)};
+
+int16_t thermistor_lookup(uint16_t start, uint16_t step, uint16_t adcvalue)
+{
+int16_t i, i1;
+
+if (adcvalue > start) 
+  adcvalue = start;
+
+i = ((start - adcvalue) / step);
+
+if (i >= THERMISTOR_LOOKUP_TABLE_SIZE-1) i = i1 = THERMISTOR_LOOKUP_TABLE_SIZE-1;
+  else i1 = i + 1;
+user_var3 = adcvalue;
+return (simple_interpolation(adcvalue, PGM_GET_WORD(&therm_cs_temperature[i1]), PGM_GET_WORD(&therm_cs_temperature[i]), 
+        start-(i1 * step), step))/16;
+}
+#endif
+
+

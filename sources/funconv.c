@@ -48,7 +48,7 @@ PGM_DECLARE(int16_t f_slots_ranges[16]) = {600,720,840,990,1170,1380,1650,1950,2
 PGM_DECLARE(int16_t f_slots_length[15]) = {120,120,150,180, 210, 270, 300, 360, 420, 480, 630, 690, 840, 990, 1140};
 
 //массив данных оборотов от температуры , шаг 10 , начало -30
-int16_t idl_collant_rpm_t[16] = {1300,1300,1300,1250,1125, 1025, 1000, 980, 960, 935, 850, 800, 800, 800, 800, 800};
+int16_t idl_collant_rpm_t[16] = {1500,1400,1300,1200,1050, 1025, 1000, 970, 940, 820, 800, 800, 800, 800, 800, 800};
 
 
 // Функция билинейной интерполяции (поверхность)
@@ -84,7 +84,7 @@ int16_t idl_coolant_rpm_function(struct ecudata_t* d)
 int16_t i, i1, t = d->sens.temperat;
 
 if (!d->param.tmp_use)
-  return d->param.idling_rpm;   //обороты хх = тем что заданы в окне оборотов РХХ, если блок неукомплектован ДТОЖ-ом
+  return d->param.idling_rpm*16;   //обороты хх = тем что заданы в окне оборотов РХХ, если блок неукомплектован ДТОЖ-ом
 
 //-30 - минимальное значение температуры
 if (t < TEMPERATURE_MAGNITUDE(-30))
@@ -209,6 +209,7 @@ int16_t coolant_function(struct ecudata_t* d)
 //Регулятор холостого хода РХХ
  uint16_t user_var1;
  uint16_t user_var2;
+// uint16_t user_var3;
 /**Describes state data for idling regulator */
 typedef struct
 {
@@ -255,7 +256,7 @@ user_var1 = idl_coolant_rpm.output_state;
     return 0;
 
 //вычисляем значение ошибки, ограничиваем ошибку (если нужно), а также, если мы в зоне
-//нечувствительности, то используем расчитанную ранее коррекцию.
+//нечувствительности, то выход с 0 коррекцией.
 
 error = idl_coolant_rpm.output_state - d->sens.frequen;
 
@@ -267,7 +268,7 @@ if (abs(error) <= d->param.MINEFR)
 {
   // если в зоне нечувствительности , то обнуляем сумму интегрального регулятора
   iState_error = 0;
-  return idl_prstate.output_state;
+  return 0;//idl_prstate.output_state;
 }
 //выбираем необходимый коэффициент регулятора, в зависимости от знака ошибки
 //if (error > 0)
@@ -283,6 +284,7 @@ if (abs(error) <= d->param.MINEFR)
 // функция реализации ПИ регулятора   
   idl_prstate.output_state = (error * factor) / 4 + (iState_error / 40)*d->param.ifac2;
   //idl_prstate.output_state = (idl_prstate.output_state * ((d->param.idling_rpm + idl_coolant_rpm.output_state)/d->sens.frequen)* factor) / 4;
+//user_var3 = d->param.ifac1;
 }
 //ограничиваем коррекцию нижним и верхним пределами регулирования
 restrict_value_to(&idl_prstate.output_state, d->param.idlreg_min_angle, d->param.idlreg_max_angle);
