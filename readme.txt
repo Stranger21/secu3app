@@ -66,6 +66,8 @@ either IAR(MS Windows) or GCC(Linux, MS Windows).
     PHASED_IGNITION      Use phased ignition. PHASE_SENSOR must be also used.
                          (разрешить фазированное зажигание)
 
+    THERMISTOR_CS        Use a resistive temperature sensor
+                         (разрешить использование резистивного датчика температуры)
 
 Necessary symbols you can define in the preprocessor's options of compiler
 (edit corresponding Makefile).
