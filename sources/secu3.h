@@ -50,12 +50,17 @@ typedef struct sensors_t
  uint8_t  gas;                           //!< State of gas valve (состояние газового клапана)
  uint16_t frequen4;                      //!< RPM averaged by using only 4 samples (частота усредненная всего по 4-м выборкам)
  uint16_t knock_k;                       //!< Knock signal level (уровень сигнала детонации)
-
+#ifdef TPS_SENSOR
+ uint16_t v_tps;                         //!< Board voltage (напряжение ДПДЗ (усредненное))
+#endif
+ 
  //сырые значения датчиков (дискреты АЦП с компенсированными погрешностями)
  int16_t  map_raw;                       //!< raw ADC value from MAP sensor
  int16_t  voltage_raw;                   //!< raw ADC value from voltage
  int16_t  temperat_raw;                  //!< raw ADC value from coolant temperature sensor
-
+#ifdef TPS_SENSOR
+ int16_t  v_tps_raw;                     //!< raw ADC value from tps
+#endif
 }sensors_t;
 
 /**Describes system's data (main ECU data structure)

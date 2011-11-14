@@ -38,9 +38,6 @@ extern uint16_t user_var3;
 /**наклон прямой датчика температуры вольт/градус */
 #define TSENS_SLOPP             0.01
 
-/**наклон прямой датчика температуры вольт/градус */
-#define TSENS_SLOPP             0.01
-
 #ifndef THERMISTOR_CS
 /**напряжение на выходе датчика температуры при 0 градусов цельсия */
 #define TSENS_ZERO_POINT        2.73
@@ -60,6 +57,11 @@ extern uint16_t user_var3;
 
 /**дискретность физической величины - напряжения */
 #define UBAT_PHYSICAL_MAGNITUDE_MULTIPLAYER (1.0/ADC_DISCRETE) //=400
+
+#ifdef TPS_SENSOR
+/**дискретность физической величины - напряжения ДПДЗ */
+#define TPS_PHYSICAL_MAGNITUDE_MULTIPLAYER (0.01/ADC_DISCRETE) //=4
+#endif
 
 /**дискретность физической величины - ДТОЖ */
 #define TEMP_PHYSICAL_MAGNITUDE_MULTIPLAYER (TSENS_SLOPP / ADC_DISCRETE) //=4
@@ -83,6 +85,13 @@ uint16_t adc_get_temp_value(void);
  * \return значение в дискретах АЦП
  */
 uint16_t adc_get_knock_value(void);
+
+#ifdef TPS_SENSOR
+/** Получение последнего измеренного значения сигнала ДПДЗ
+ * \return значение в дискретах АЦП
+ */
+uint16_t adc_get_tps_value(void);
+#endif
 
 /**запускает измерение значений с датчиков, но только если предыдущее
  * измерение завершено.
@@ -137,6 +146,14 @@ uint16_t map_adc_to_kpa(int16_t adcvalue, int16_t offset, int16_t gradient);
  * \return физическая величина * UBAT_PHYSICAL_MAGNITUDE_MULTIPLAYER
  */
 uint16_t ubat_adc_to_v(int16_t adcvalue);
+
+#ifdef TPS_SENSOR
+/**переводит значение АЦП в физическую величину - напряжение ДПДЗ
+ * \param adcvalue значение в дискретах АЦП
+ * \return физическая величина * TPS_PHYSICAL_MAGNITUDE_MULTIPLAYER
+ */
+uint16_t tps_adc_to_v(int16_t adcvalue);
+#endif
 
 #ifndef THERMISTOR_CS
 

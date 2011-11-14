@@ -50,6 +50,11 @@
 /** Transforms floating point value of voltage to fixed point value */
 #define VOLTAGE_MAGNITUDE(t) ROUND ((t) * UBAT_PHYSICAL_MAGNITUDE_MULTIPLAYER)
 
+#ifdef TPS_SENSOR
+/** Transforms floating point value of voltage tps to fixed point value */
+#define V_TPS_MAGNITUDE(t) ROUND ((t) * TPS_PHYSICAL_MAGNITUDE_MULTIPLAYER)
+#endif
+
 /** Transforms floating point value of pressure(MAP) to fixed point value */
 #define PRESSURE_MAGNITUDE(t) ROUND ((t) * MAP_PHYSICAL_MAGNITUDE_MULTIPLAYER)
 

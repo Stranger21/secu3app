@@ -45,6 +45,10 @@
 #define ADCI_KNOCK              3
 /**заглушка, используется для ADCI_KNOCK чтобы сформировать задержку */
 #define ADCI_STUB               4
+#ifdef TPS_SENSOR
+/**номер канала используемого для ДПДЗ*/
+#define ADCI_TPS                5
+#endif
 
 uint16_t user_var3;
 
@@ -55,7 +59,10 @@ typedef struct
  volatile uint16_t ubat_value;  //!< последнее измеренное значение напряжения бортовой сети
  volatile uint16_t temp_value;  //!< последнее измеренное значение температуры охлаждающей жидкости
  volatile uint16_t knock_value; //!< последнее измеренное значение сигнала детонации
-
+#ifdef TPS_SENSOR
+ volatile uint16_t tps_value;   //!< последнее измеренное значение ДПДЗ
+#endif
+ 
  volatile uint8_t sensors_ready;//!< датчики обработаны и значения готовы к считыванию
  uint8_t  measure_all;          //!< если 1, то производится измерение всех значений
 }adcstate_t;
@@ -98,6 +105,17 @@ uint16_t adc_get_knock_value(void)
  _END_ATOMIC_BLOCK();
  return value;
 }
+
+#ifdef TPS_SENSOR
+uint16_t adc_get_tps_value(void)
+{
+ uint16_t value;
+ _BEGIN_ATOMIC_BLOCK();
+ value = adc.tps_value;
+ _END_ATOMIC_BLOCK();
+ return value;
+}
+#endif
 
 void adc_begin_measure(void)
 {
@@ -196,6 +214,14 @@ ISR(ADC_vect)
    adc.knock_value = ADC;
    adc.sensors_ready = 1;
    break;
+
+#ifdef TPS_SENSOR   
+  case ADCI_TPS: //закончено измерение напряжения ДПДЗ
+   adc.tps_value = ADC;
+   ADMUX = ADCI_TPS|ADC_VREF_TYPE;
+   SETBIT(ADCSRA,ADSC);
+   break;
+#endif   
  }
 }
 
@@ -236,6 +262,16 @@ uint16_t ubat_adc_to_v(int16_t adcvalue)
   adcvalue = 0;
  return adcvalue;
 }
+
+#ifdef TPS_SENSOR
+uint16_t tps_adc_to_v(int16_t adcvalue)
+{
+ if (adcvalue < 0)
+  adcvalue = 0;
+ user_var3 = adcvalue;
+ return adcvalue;
+}
+#endif
 
 #ifndef THERMISTOR_CS
 
