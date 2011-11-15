@@ -33,6 +33,7 @@
 #include "magnitude.h"
 #include "secu3.h"
 #include "vstimer.h"
+#include "idlregul.h"
 
 //For use with fn_dat pointer, because it can point either to FLASH or RAM
 #ifdef REALTIME_TABLES
@@ -270,6 +271,16 @@ if (abs(error) <= d->param.MINEFR)
   iState_error = 0;
   return 0;//idl_prstate.output_state;
 }
+// тут работаем с механическим РХХ
+if (abs(error)<= (d->param.MINEFR +20))
+   idlregul_set_state(3);
+else 
+    if (error <0)
+      idlregul_set_state(1);
+        else
+          idlregul_set_state(2);
+
+        
 //выбираем необходимый коэффициент регулятора, в зависимости от знака ошибки
 //if (error > 0)
   factor = d->param.ifac1;

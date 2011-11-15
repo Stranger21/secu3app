@@ -274,16 +274,22 @@ void ckps_init_ports(void)
  //поэтому устанавливаем на их входах низкий уровень)
 #ifndef INVERSE_IGN_OUTPUTS
  PORTD|= _BV(PD5)|_BV(PD4)|_BV(PD6); // 1st and 2nd ignition channels, pullup for ICP1 (1-й и 2-й каналы зажигани€, подт€жка дл€ ICP1)
+#ifdef IDL_REGUL
  PORTC|= _BV(PC1)|_BV(PC0); //3rd and 4th ignition channels (3-й и 4-й каналы зажигани€)
+#endif
 #else //outputs inversion mode (режим инверсии выходов)
  PORTD&= ~(_BV(PD5)|_BV(PD4));
+#ifdef IDL_REGUL
  PORTC&= ~(_BV(PC1)|_BV(PC0));
+#endif
  PORTD|= _BV(PD6);
 #endif
 
  //PD5,PD4,PC1,PC0 must be configurated as outputs (должны быть сконфигурированы как выходы)
  DDRD|= _BV(DDD5)|_BV(DDD4); //1-2 ignition channels - for 2 and 4 cylinder engines (1-2 каналы зажигани€ - дл€ 2 и 4 ц. двигателей)
+#ifdef IDL_REGUL
  DDRC|= _BV(DDC1)|_BV(DDC0); //3-4 ignition channels - for 6 and 8 cylinder engines (3-4 каналы зажигани€ - дл€ 6 и 8 ц. двигателей)
+#endif
 }
 
 //Calculation of instantaneous frequency of crankshaft rotation from the measured period between the cycles of the engine 
@@ -456,7 +462,7 @@ void ckps_set_merge_outs(uint8_t i_merge)
 {
  ckps.chan_mask = i_merge ? 0x00 : 0xFF;
 }
-
+#ifndef IDL_REGUL
 #ifndef PHASED_IGNITION
 /**Helpful macro.
  * Generates end of accumulation pulse (moment of spark) for 1st,2nd,3rd,4th channels correspondingly
@@ -470,6 +476,7 @@ void ckps_set_merge_outs(uint8_t i_merge)
    break;\
   case 3: PORTC |= _BV(PC1);\
    break;}
+
 
 /**Helpful macro.
  * Generates end of ignition drive pulse for 1st,2nd,3rd,4th channels correspondingly
@@ -530,6 +537,59 @@ void ckps_set_merge_outs(uint8_t i_merge)
 
 #endif
 
+#else
+
+#ifndef PHASED_IGNITION
+/**Helpful macro.
+ * Generates end of accumulation pulse (moment of spark) for 1st,2nd,3rd,4th channels correspondingly
+ * (¬спомогательный макрос.  онец импульса накачки (момент искры) дл€ 1-го,2-го,3-го,4-го каналов соответственно). */
+#define TURNON_IGN_CHANNELS(){\
+  case 0: PORTD |= _BV(PD4);\
+   break;\
+  case 1: PORTD |= _BV(PD5);\
+   break;}
+ 
+
+/**Helpful macro.
+ * Generates end of ignition drive pulse for 1st,2nd,3rd,4th channels correspondingly
+ * (¬спомогательный макрос.  онец импульса запуска зажигани€ дл€ 1-го,2-го,3-го,4-го каналов соответственно) */
+#define TURNOFF_IGN_CHANNELS(){\
+ case 0: PORTD &= ~_BV(PD4);\
+  break;\
+ case 1: PORTD &= ~_BV(PD5);\
+  break;}
+
+#else //phased ignition
+
+/**Helpful macro.
+ * Generates end of accumulation pulse (moment of spark) in phased ignition mode
+ */
+#define TURNON_IGN_CHANNELS(){\
+ case 0:\
+  if (0==(chanstate[0].chan_cyl & ckps.chan_mask))\
+   PORTD |= _BV(PD4);\
+  else if (1==chanstate[0].chan_cyl)\
+   PORTD |= _BV(PD5);\
+  else\
+   PORTD |= (_BV(PD4) | _BV(PD5));\
+  break;}
+
+/**Helpful macro.
+ * Generates end of ignition drive pulse in phased ignition mode
+ */
+#define TURNOFF_IGN_CHANNELS(){\
+ case 0:\
+  if (0==(chanstate[0].chan_cyl & ckps.chan_mask))\
+   PORTD &= ~_BV(PD4);\
+  else if (1==chanstate[0].chan_cyl)\
+   PORTD &= ~_BV(PD5);\
+  else\
+   PORTD &= ~(_BV(PD4) | _BV(PD5));\
+  break;}
+ 
+#endif
+
+#endif //IDL_REGUL
 /** Turn OFF specified ignition channel
  * \param i_channel number of ignition channel to turn off
  */

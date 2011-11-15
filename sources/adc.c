@@ -180,10 +180,18 @@ ISR(ADC_vect)
  {
   case ADCI_MAP: //закончено измерение абсолютного давления
    adc.map_value = ADC;
+   ADMUX = ADCI_TPS|ADC_VREF_TYPE;
+   SETBIT(ADCSRA,ADSC);
+   break;
+   
+#ifdef TPS_SENSOR   
+  case ADCI_TPS: //закончено измерение напряжения ДПДЗ
+   adc.tps_value = ADC;
    ADMUX = ADCI_UBAT|ADC_VREF_TYPE;
    SETBIT(ADCSRA,ADSC);
    break;
-
+#endif   
+  
   case ADCI_UBAT://закончено измерение напряжения бортовой сети
    adc.ubat_value = ADC;
    ADMUX = ADCI_TEMP|ADC_VREF_TYPE;
@@ -214,14 +222,6 @@ ISR(ADC_vect)
    adc.knock_value = ADC;
    adc.sensors_ready = 1;
    break;
-
-#ifdef TPS_SENSOR   
-  case ADCI_TPS: //закончено измерение напряжения ДПДЗ
-   adc.tps_value = ADC;
-   ADMUX = ADCI_TPS|ADC_VREF_TYPE;
-   SETBIT(ADCSRA,ADSC);
-   break;
-#endif   
  }
 }
 
@@ -268,7 +268,7 @@ uint16_t tps_adc_to_v(int16_t adcvalue)
 {
  if (adcvalue < 0)
   adcvalue = 0;
- user_var3 = adcvalue;
+ //user_var3 = adcvalue;
  return adcvalue;
 }
 #endif
@@ -279,7 +279,7 @@ int16_t temp_adc_to_c(int16_t adcvalue)
 {
  if (adcvalue < 0)
   adcvalue = 0;
-user_var3 = adcvalue;
+//user_var3 = adcvalue;
  return (adcvalue - ((int16_t)((TSENS_ZERO_POINT / ADC_DISCRETE)+0.5)) );
 }
 #else
@@ -306,7 +306,7 @@ i = ((start - adcvalue) / step);
 
 if (i >= THERMISTOR_LOOKUP_TABLE_SIZE-1) i = i1 = THERMISTOR_LOOKUP_TABLE_SIZE-1;
   else i1 = i + 1;
-user_var3 = adcvalue;
+//user_var3 = adcvalue;
 return (simple_interpolation(adcvalue, PGM_GET_WORD(&therm_cs_temperature[i1]), PGM_GET_WORD(&therm_cs_temperature[i]), 
         start-(i1 * step), step))/16;
 }

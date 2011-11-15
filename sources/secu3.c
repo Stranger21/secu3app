@@ -38,6 +38,7 @@
 #include "eeprom.h"
 #include "fuelecon.h"
 #include "fuelpump.h"
+#include "idlregul.h"
 #include "funconv.h"
 #include "jumper.h"
 #include "idlecon.h"
@@ -80,6 +81,9 @@ void control_engine_units(struct ecudata_t *d)
  //Controlling of electric fuel pump (Управление электробензонасосом)
  fuelpump_control(d);
 #endif
+#ifdef IDL_REGUL
+ idlregul_control(d);
+#endif 
 }
 
 /**Initialization of variables and data structures 
@@ -121,6 +125,9 @@ MAIN()
 #ifdef FUEL_PUMP
  fuelpump_init_ports();
 #endif
+#ifdef IDL_REGUL
+ idlregul_init_ports();
+#endif 
  idlecon_init_ports();
  starter_init_ports();
  ce_init_ports();

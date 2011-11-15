@@ -53,14 +53,18 @@
 #define MAP_AVERAGING           4                 //!< Number of values for averaging of pressure (MAP)
 #define BAT_AVERAGING           4                 //!< Number of values for averaging of board voltage
 #define TMP_AVERAGING           8                 //!< Number of values for averaging of coolant temperature
+#ifdef TPS_SENSOR
 #define TPS_AVERAGING           4                 //!< Number of values for averaging of TPS
+#endif
 
 uint16_t freq_circular_buffer[FRQ_AVERAGING];     //!< Ring buffer for RPM averaging for tachometer (буфер усреднения частоты вращения коленвала для тахометра)
 uint16_t freq4_circular_buffer[FRQ4_AVERAGING];   //!< Ring buffer for RPM averaging for starter blocking (буфер усреднения частоты вращения коленвала для блокировки стартера)
 uint16_t map_circular_buffer[MAP_AVERAGING];      //!< Ring buffer for averaring of MAP sensor (буфер усреднения абсолютного давления)
 uint16_t ubat_circular_buffer[BAT_AVERAGING];     //!< Ring buffer for averaring of voltage (буфер усреднения напряжения бортовой сети)
 uint16_t temp_circular_buffer[TMP_AVERAGING];     //!< Ring buffer for averaring of coolant temperature (буфер усреднения температуры охлаждающей жидкости)
+#ifdef TPS_SENSOR
 uint16_t tps_circular_buffer[TPS_AVERAGING];     //!< Ring buffer for averaring of tps (буфер усреднения напряжения от ДПДЗ)
+#endif
 
 //обновление буферов усреднения (частота вращения, датчики...)
 void meas_update_values_buffers(struct ecudata_t* d, uint8_t rpm_only)
@@ -70,8 +74,10 @@ void meas_update_values_buffers(struct ecudata_t* d, uint8_t rpm_only)
  static uint8_t  tmp_ai  = TMP_AVERAGING-1;
  static uint8_t  frq_ai  = FRQ_AVERAGING-1;
  static uint8_t  frq4_ai = FRQ4_AVERAGING-1;
+#ifdef TPS_SENSOR
  static uint8_t  tps_ai  = TPS_AVERAGING-1;
-
+#endif
+ 
  freq_circular_buffer[frq_ai] = d->sens.inst_frq;
  (frq_ai==0) ? (frq_ai = FRQ_AVERAGING - 1): frq_ai--;
 
@@ -90,9 +96,10 @@ void meas_update_values_buffers(struct ecudata_t* d, uint8_t rpm_only)
  temp_circular_buffer[tmp_ai] = adc_get_temp_value();
  (tmp_ai==0) ? (tmp_ai = TMP_AVERAGING - 1): tmp_ai--;
 
+#ifdef TPS_SENSOR 
  tps_circular_buffer[tps_ai] = adc_get_tps_value();
  (tps_ai==0) ? (tps_ai = TPS_AVERAGING - 1): tps_ai--; 
- 
+#endif 
 
  d->sens.knock_k = adc_get_knock_value() * 2;
 }
@@ -113,11 +120,14 @@ void meas_average_measured_values(struct ecudata_t* d)
  d->sens.voltage_raw = adc_compensate((sum/BAT_AVERAGING)*6,d->param.ubat_adc_factor,d->param.ubat_adc_correction);
  d->sens.voltage = ubat_adc_to_v(d->sens.voltage_raw);
 
+#ifdef TPS_SENSOR 
  for (sum=0,i = 0; i < TPS_AVERAGING; i++)   //усредняем напряжение ДПДЗ
   sum+=tps_circular_buffer[i];
  d->sens.v_tps_raw = adc_compensate((5*(sum/TPS_AVERAGING))/3,d->param.ubat_adc_factor,d->param.ubat_adc_correction);
- d->sens.v_tps = tps_adc_to_v(d->sens.voltage_raw);
-
+ d->sens.v_tps = tps_adc_to_v(d->sens.v_tps_raw);
+ user_var3 = d->sens.v_tps;
+#endif
+ 
  if (d->param.tmp_use)
  {
   for (sum=0,i = 0; i < TMP_AVERAGING; i++) //усредняем температуру (ДТОЖ)
