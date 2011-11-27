@@ -242,6 +242,11 @@ uint16_t capture_range = 100;
 idl_coolant_rpm.output_state = idl_coolant_rpm_function(d)/16;
 user_var1 = idl_coolant_rpm.output_state;
 
+// Если обороты выше зоны РХХ , то включить задвигание РХХ
+if (d->sens.frequen >(idl_coolant_rpm.output_state + capture_range)) 
+{
+idlregul_set_state(2,d);
+}
 //если PXX отключен или обороты значительно выше от нормальных холостых оборотов
 // или обороты не упали ниже целевые +10 первый раз после выхода с рабочего режима , то выходим  с нулевой корректировкой
 //также обнуляем сумму интегрального регулятора при первом разрешенном входе в РХХ
@@ -273,14 +278,19 @@ if (abs(error) <= d->param.MINEFR)
 }
 // тут работаем с механическим РХХ
 if (abs(error)<= (d->param.MINEFR +20))
-   idlregul_set_state(3);
+   idlregul_set_state(3,d);
 else 
-    if (error <0)
-      idlregul_set_state(1);
+    if (error >0)
+      idlregul_set_state(2,d);
         else
-          idlregul_set_state(2);
+          idlregul_set_state(1,d);
 
-        
+
+
+
+
+
+
 //выбираем необходимый коэффициент регулятора, в зависимости от знака ошибки
 //if (error > 0)
   factor = d->param.ifac1;

@@ -60,7 +60,7 @@ extern uint16_t user_var3;
 
 #ifdef TPS_SENSOR
 /**дискретность физической величины - напряжения ДПДЗ */
-#define TPS_PHYSICAL_MAGNITUDE_MULTIPLAYER (0.01/ADC_DISCRETE) //=4
+#define TPS_PHYSICAL_MAGNITUDE_MULTIPLAYER (1.0/ADC_DISCRETE) //=400
 #endif
 
 /**дискретность физической величины - ДТОЖ */

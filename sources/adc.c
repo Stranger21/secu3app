@@ -47,7 +47,7 @@
 #define ADCI_STUB               4
 #ifdef TPS_SENSOR
 /**номер канала используемого для ДПДЗ*/
-#define ADCI_TPS                5
+#define ADCI_TPS                6
 #endif
 
 uint16_t user_var3;

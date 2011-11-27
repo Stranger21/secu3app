@@ -82,7 +82,7 @@ void control_engine_units(struct ecudata_t *d)
  fuelpump_control(d);
 #endif
 #ifdef IDL_REGUL
- idlregul_control(d);
+ if (idl_start_en) idlregul_control(d);
 #endif 
 }
 
