@@ -40,13 +40,12 @@ extern uint16_t user_var3;
 
 #ifndef THERMISTOR_CS
 /**напряжение на выходе датчика температуры при 0 градусов цельсия */
-#define TSENS_ZERO_POINT        2.73
+ #define TSENS_ZERO_POINT        2.73
 #else
-/**напряжение при минимальной температуре на резистивном датчике температуре */
-#define TSENS_V_TMIN            4.37
-
-/**шаг по напряжению для таблицы темперутр */
-#define TSENS_STEP              0.27
+ /**Voltage which corresponds to minimum temperature */
+ #define TSENS_V_TMIN            4.37
+ /**Voltage which is step between interpolation nodes in table */
+ #define TSENS_STEP              0.27
 #endif
 
 /**константа для выбора источника опорного напряжения */
@@ -154,22 +153,22 @@ uint16_t ubat_adc_to_v(int16_t adcvalue);
  */
 uint16_t tps_adc_to_v(int16_t adcvalue);
 #endif
-
 #ifndef THERMISTOR_CS
-
-/**переводит значение АЦП в физическую величину - температура
- * \param adcvalue значение в дискретах АЦП
+/**Converts ADV value into phisical magnituge - temperature (given from linear sensor)
+ * Переводит значение АЦП в физическую величину - температура, для линейного датчика
+ * \param adcvalue Voltage from sensor (напряжение с датчика - значение в дискретах АЦП)
  * \return физическая величина * TEMP_PHYSICAL_MAGNITUDE_MULTIPLAYER
  */
 int16_t temp_adc_to_c(int16_t adcvalue);
 #else
-/**переводит значение АЦП в физическую величину - температура
- *для резистивного датчика
- * \param start значение напряжения в минимальной температуре в дискретах АЦП
- * \param step значение шага по напряжению в таблице , в дискретах АЦП
- * \param adcvalue значение в дискретах АЦП
+/**Converts ADC value into phisical magnitude - temperature (given from thermistor)
+ * (переводит значение АЦП в физическую величину - температура для резистивного датчика (термистор))
+ * \param start Voltage value at lowest temperature in ADC discretes (значение напряжения при минимальной температуре в дискретах АЦП)
+ * \param step Voltage step in ADC discretes (значение шага по напряжению в таблице , в дискретах АЦП)
+ * \param adcvalue Voltage from sensor (напряжение с датчика - значение в дискретах АЦП))
  * \return физическая величина * TEMP_PHYSICAL_MAGNITUDE_MULTIPLAYER
  */
 int16_t thermistor_lookup(uint16_t start, uint16_t step, uint16_t adcvalue);
 #endif
+
 #endif //_ADC_H_

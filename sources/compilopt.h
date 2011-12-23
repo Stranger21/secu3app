@@ -27,7 +27,7 @@
 #define _COMPILOPT_H_
 
 #include "port/port.h"
-           
+
 /**ATmega16 target */
 #ifdef _PLATFORM_M16_
  #define COPT_ATMEGA16 1
@@ -131,6 +131,20 @@
  #define COPT_PHASED_IGNITION 1
 #else
  #define COPT_PHASED_IGNITION 0
+#endif
+
+/** Enable controlling of electric fuel pump */
+#ifdef FUEL_PUMP
+ #define COPT_FUEL_PUMP 1
+#else
+ #define COPT_FUEL_PUMP 0
+#endif
+
+/** Coolant sensor is thermistor */
+#ifdef THERMISTOR_CS
+ #define COPT_THERMISTOR_CS 1
+#else
+ #define COPT_THERMISTOR_CS 0
 #endif
 
 #endif //_COMPILOPT_H_

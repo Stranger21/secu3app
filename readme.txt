@@ -65,14 +65,19 @@ either IAR(MS Windows) or GCC(Linux, MS Windows).
     PHASED_IGNITION      Use phased ignition. PHASE_SENSOR must be also used.
                          (разрешить фазированное зажигание)
 
-    THERMISTOR_CS        Use a resistive temperature sensor
-                         (разрешить использование резистивного датчика температуры)
-
     FUEL_PUMP            Electric fuel pump control
                          (Управление электробензонасосом)
 
     TPS_SENSOR           Use TPS
                          (Разрешить использование ДПДЗ PA5)
+
+    BL_BAUD_RATE         Baud rate for boot loader. Can be set to 9600, 14400,
+                         19200, 28800, 38400, 57600
+                         (Скорость передачи данных для загрузчика)
+
+    THERMISTOR_CS        Use a resistive temperature sensor
+                         (Используется датчик температуры охлаждающей жидкости
+                         резистивного типа)
 
 Necessary symbols you can define in the preprocessor's options of compiler
 (edit corresponding Makefile).
