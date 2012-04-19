@@ -35,6 +35,7 @@
 #include "ce_errors.h"
 #include "ckps.h"
 #include "crc16.h"
+#include "diagnost.h"
 #include "eeprom.h"
 #include "fuelecon.h"
 #include "fuelpump.h"
@@ -56,6 +57,7 @@
 #include "uart.h"
 #include "ventilator.h"
 #include "vstimer.h"
+#include "wdt.h"
 
 /**ECU data structure. Contains all related data and state information */
 struct ecudata_t edat;
@@ -137,6 +139,8 @@ MAIN()
  //если код программы испорчен - зажигаем СЕ
  if (crc16f(0, CODE_SIZE)!=PGM_GET_WORD(&fw_data.code_crc))
   ce_set_error(ECUERROR_PROGRAM_CODE_BROKEN);
+
+ wdt_start_timer();
 
  //читаем параметры
  load_eeprom_params(&edat);
@@ -232,7 +236,7 @@ MAIN()
    if (!edat.param.knock_use_knock_channel)
    {
     _DISABLE_INTERRUPT();
-    adc_begin_measure();
+    adc_begin_measure(0);  //normal speed
     _ENABLE_INTERRUPT();
    }
    else
@@ -289,7 +293,11 @@ MAIN()
   if (edat.param.ign_cutoff)
    ckps_enable_ignition(edat.sens.inst_frq < edat.param.ign_cutoff_thrd);
   else
-   ckps_enable_ignition(1);  
+   ckps_enable_ignition(1);
+
+#ifdef DIAGNOSTICS
+  diagnost_process(&edat);
+#endif
   //------------------------------------------------------------------------
 
   //выполняем операции которые необходимо выполнять строго для каждого рабочего цикла.
@@ -333,6 +341,7 @@ MAIN()
     turnout_low_priority_errors_counter--;
   }
 
+  wdt_reset_timer();
  }//main loop
  //------------------------------------------------------------------------
 }

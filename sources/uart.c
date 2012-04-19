@@ -64,6 +64,9 @@
 #ifndef UCSZ1
  #define UCSZ1 UCSZ01
 #endif
+#ifndef U2X
+ #define U2X U2X0
+#endif
 #define UDR   UDR0
 #define UBRRL UBRR0L
 #define UBRRH UBRR0H
@@ -474,6 +477,19 @@ void uart_send_packet(struct ecudata_t* d, uint8_t send_mode)
    build_i16h(/*Your variable here*/0);
    break;
 #endif
+#ifdef DIAGNOSTICS
+  case DIAGINP_DAT:
+   build_i16h(d->diag_inp.voltage);
+   build_i16h(d->diag_inp.map);
+   build_i16h(d->diag_inp.temp);
+   build_i16h(d->diag_inp.add_io1);
+   build_i16h(d->diag_inp.add_io2);
+   build_i16h(d->diag_inp.carb);
+   build_i16h(d->diag_inp.ks_1);
+   build_i16h(d->diag_inp.ks_2);
+   build_i8h(d->diag_inp.bits);
+   break;
+#endif
  }//switch
 
  //общая часть для всех пакетов
@@ -648,6 +664,11 @@ uint8_t uart_recept_packet(struct ecudata_t* d)
   }
   break;
 #endif
+#ifdef DIAGNOSTICS
+  case DIAGOUT_DAT:
+   d->diag_out = recept_i16h();
+   break;
+#endif
  }//switch
 
  return descriptor;
@@ -684,7 +705,7 @@ void uart_init(uint16_t baud)
  // Set baud rate
  UBRRH = (uint8_t)(baud>>8);
  UBRRL = (uint8_t)baud;
- UCSRA = 0;                                                  //удвоение не используем
+ UCSRA = _BV(U2X);                                           //удвоение используем для минимизации ошибки
  UCSRB=_BV(RXCIE)|_BV(RXEN)|_BV(TXEN);                       //приемник,прерывание по приему и передатчик разрешены
 #ifdef URSEL
  UCSRC=_BV(URSEL)/*|_BV(USBS)*/|_BV(UCSZ1)|_BV(UCSZ0);       //8 бит, 1 стоп, нет контроля четности

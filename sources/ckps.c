@@ -32,6 +32,7 @@
 #include "bitmask.h"
 #include "camsens.h"
 #include "ckps.h"
+#include "ioconfig.h"
 #include "magnitude.h"
 #include "starter.h"
 
@@ -78,8 +79,8 @@
 /** Access Input Capture Register */
 #define GetICR() (ICR1)
 
-/** 4 channels of ignition maximum (максимум 4 канала зажигания) */
-#define IGN_CHANNELS_MAX     3
+/**Maximum number of channels (Each channel means 2 ign. channels)*/
+#define IGN_CHANNELS_MAX     4
 
 /** Used to indicate that none from ignition channels are selected
  * (используется для указания того что ни один канал зажигания не выбран) */
@@ -188,9 +189,9 @@ chanstate_t chanstate[IGN_CHANNELS_MAX];  //!< instance of array of channel's st
 /**Will speedup calculations - replaces 8-bit division. */
 #define COGSPERCHAN(channum) PGM_GET_BYTE(&cogsperchan[channum])
 #ifndef WHEEL_36_1 //60-2
-prog_uint8_t cogsperchan[1+4] = {0, 60, 30, 20, 15};
+prog_uint8_t cogsperchan[1+IGN_CHANNELS_MAX] = {0, 60, 30, 20, 15};
 #else //36-1
-prog_uint8_t cogsperchan[1+4] = {0, 36, 18, 12, 9};
+prog_uint8_t cogsperchan[1+IGN_CHANNELS_MAX] = {0, 36, 18, 12, 9};
 #endif
 
 #ifdef PHASED_IGNITION
@@ -275,42 +276,30 @@ void ckps_init_ports(void)
 #ifndef INVERSE_IGN_OUTPUTS
  PORTD|= _BV(PD5)|_BV(PD4)|_BV(PD6); // 1st and 2nd ignition channels, pullup for ICP1 (1-й и 2-й каналы зажигания, подтяжка для ICP1)
 #ifndef IDL_REGUL
+ IOCFG_INIT(IOP_IGN_OUT3, 1);        //init 3-rd ignition channel if allowed
+ IOCFG_INIT(IOP_IGN_OUT4, 1);        //init 4-th ...
+ IOCFG_INIT(IOP_ADD_IO1, 1);         //init 5-th ...
+ IOCFG_INIT(IOP_ADD_IO2, 1);         //init 6-th ...
 
-#if (IGN_CHANNELS_MAX==3)
- PORTC|= _BV(PC0);          //3rd ignition channel only (только 3-й канал зажигания)
-#elif (IGN_CHANNELS_MAX==4)
- PORTC|= _BV(PC1)|_BV(PC0); //3rd and 4th ignition channels (3-й и 4-й каналы зажигания)
-#endif
 #endif
 
 #else //outputs inversion mode (режим инверсии выходов)
  PORTD|= _BV(PD6);
  PORTD&= ~(_BV(PD5)|_BV(PD4));
 #ifndef IDL_REGUL
+ IOCFG_INIT(IOP_IGN_OUT3, 0);        //init 3-rd ignition channel if allowed
+ IOCFG_INIT(IOP_IGN_OUT4, 0);        //init 4-th ...
+ IOCFG_INIT(IOP_ADD_IO1, 0);         //init 5-th ...
+ IOCFG_INIT(IOP_ADD_IO2, 0);         //init 6-th ..
 
-#if (IGN_CHANNELS_MAX==3)
- PORTC&= ~(_BV(PC0));
-#elif (IGN_CHANNELS_MAX==4)
- PORTC&= ~(_BV(PC1)|_BV(PC0));
-#endif
 #endif
 
 #endif //INVERSE_IGN_OUTPUTS
 
  //PD5,PD4,PC1,PC0 must be configurated as outputs (должны быть сконфигурированы как выходы)
  DDRD|= _BV(DDD5)|_BV(DDD4); //1-2 ignition channels - for 2 and 4 cylinder engines (1-2 каналы зажигания - для 2 и 4 ц. двигателей)
-#ifndef IDL_REGUL
-
-#if (IGN_CHANNELS_MAX==3)
- DDRC|= _BV(DDC0);           //3 ignition channel only - for 6 cylinder engines (только 3 канал зажигания - для 6 ц. двигателей)
-#elif (IGN_CHANNELS_MAX==4)
- DDRC|= _BV(DDC1)|_BV(DDC0); //3-4 ignition channels - for 6 and 8 cylinder engines (3-4 каналы зажигания - для 6 и 8 ц. двигателей)
-#endif
-#endif
-
 }
-
-//Calculation of instantaneous frequency of crankshaft rotation from the measured period between the cycles of the engine 
+//Calculation of instantaneous frequency of crankshaft rotation from the measured period between the cycles of the engine
 //(for example for 4-cylinder, 4-stroke it is 180 degrees) 
 //Period measured in the discretes of timer (one discrete = 4us), one minute = 60 seconds, one second has 1,000,000 us.
 //Высчитывание мгновенной частоты вращения коленвала по измеренному периоду между тактами двигателя 
@@ -530,6 +519,15 @@ void ckps_set_merge_outs(uint8_t i_merge)
    PORTC |= _BV(PC1);\
   else\
    PORTC |= (_BV(PC0) | _BV(PC1));\
+  break;\
+ case 2:\
+  if (0==chanstate[2].chan_cyl)\
+   PORTC |= _BV(PC5);\
+  else if (1==chanstate[2].chan_cyl)\
+   PORTA |= _BV(PA4);\
+  else {\
+   PORTC |= _BV(PC5); PORTA |= _BV(PA4);\
+   }\
   break;}
 
 /**Helpful macro.
@@ -551,6 +549,15 @@ void ckps_set_merge_outs(uint8_t i_merge)
    PORTC &= ~_BV(PC1);\
   else\
    PORTC &= ~(_BV(PC0) | _BV(PC1));\
+  break;\
+ case 2:\
+  if (0==chanstate[2].chan_cyl)\
+   PORTC &= ~_BV(PC5);\
+  else if (1==chanstate[2].chan_cyl)\
+   PORTA &= ~_BV(PA4);\
+  else {\
+   PORTC &= ~_BV(PC5); PORTA &= ~_BV(PA4);\
+   }\
   break;}
 
 #endif
@@ -590,6 +597,15 @@ void ckps_set_merge_outs(uint8_t i_merge)
    PORTD |= _BV(PD5);\
   else\
    PORTD |= (_BV(PD4) | _BV(PD5));\
+  break;\
+ case 2:\
+  if (0==chanstate[2].chan_cyl)\
+   PORTC |= _BV(PC5);\
+  else if (1==chanstate[2].chan_cyl)\
+   PORTA |= _BV(PA4);\
+  else {\
+   PORTC |= _BV(PC5); PORTA |= _BV(PA4);\
+   }\
   break;}
 
 /**Helpful macro.
@@ -603,7 +619,16 @@ void ckps_set_merge_outs(uint8_t i_merge)
    PORTD &= ~_BV(PD5);\
   else\
    PORTD &= ~(_BV(PD4) | _BV(PD5));\
-  break;}
+ break;\
+ case 2:\
+  if (0==chanstate[2].chan_cyl)\
+   PORTC &= ~_BV(PC5);\
+  else if (1==chanstate[2].chan_cyl)\
+   PORTA &= ~_BV(PA4);\
+  else {\
+   PORTC &= ~_BV(PC5); PORTA &= ~_BV(PA4);\
+   }\ 
+ break;}
  
 #endif
 
@@ -859,7 +884,7 @@ if (ckps.cog == CKPS_DX_OUT_COG4) starter_set_blocking_state(0);
    if (ckps.cog == chanstate[i].knock_wnd_end)
    {
     knock_set_integration_mode(KNOCK_INTMODE_HOLD);
-    adc_begin_measure_knock();
+    adc_begin_measure_knock(_AB(ckps.half_turn_period, 1) < 4);
    }
   }
  }
@@ -878,7 +903,7 @@ if (ckps.cog == CKPS_DX_OUT_COG4) starter_set_blocking_state(0);
    ckps.current_angle = ANGLE_MAGNITUDE(CKPS_DEGREES_PER_COG) * WHEEL_LATCH_BTDC; // those same 66° (те самые 66°)
    ckps.advance_angle = ckps.advance_angle_buffered; //advance angle with all the adjustments (say, 15°)(опережение со всеми корректировками (допустим, 15°))
    knock_start_settings_latching();//start the process of downloading the settings into the HIP9011 (запускаем процесс загрузки настроек в HIP)
-   adc_begin_measure();            //start the process of measuring analog input values (запуск процесса измерения значений аналоговых входов)
+   adc_begin_measure(_AB(ckps.half_turn_period, 1) < 4);//start the process of measuring analog input values (запуск процесса измерения значений аналоговых входов)
   }
 
   //teeth of end/beginning of the measurement of rotation period - t.d.c Read and save the measured period,
@@ -912,7 +937,10 @@ if (ckps.cog == CKPS_DX_OUT_COG4) starter_set_blocking_state(0);
    //before starting the ignition it is left to count less than 2 teeth. It is necessary to prepare the compare module
    //(до запуска зажигания осталось отсчитать меньше 2-x зубьев. Необходимо подготовить модуль сравнения)
    //TODO: replace heavy division by multiplication with magic number. This will reduce up to 40uS !
-   OCR1A = GetICR() + ((uint32_t)diff * (ckps.period_curr)) / ANGLE_MAGNITUDE(CKPS_DEGREES_PER_COG);
+   if (ckps.period_curr < 128)
+    OCR1A = GetICR() + (diff * (ckps.period_curr)) / ANGLE_MAGNITUDE(CKPS_DEGREES_PER_COG);
+   else
+    OCR1A = GetICR() + ((uint32_t)diff * (ckps.period_curr)) / ANGLE_MAGNITUDE(CKPS_DEGREES_PER_COG);
    TIFR = _BV(OCF1A);
    flags->ckps_need_to_set_channel = 0; // For avoiding to enter into setup mode (чтобы не войти в режим настройки ещё раз)
    timsk_sv|= _BV(OCIE1A); //enable Compare A interrupt (разрешаем прерывание)

@@ -19,34 +19,20 @@
               email: shabelnikov@secu-3.org
 */
 
-/** \file fuelecon.c
- * Implementation of controlling algorithms for Fuel Economizer (FE)
- * (Реализация алгоритмов управления Экономайзером Мощностных Режимов (ЭМР)).
+/** \file wdt.h
+ * Watchdog timer API (Модуль сторожевого таймера)
  */
 
-#include "port/avrio.h"
-#include "port/port.h"
-#include "bitmask.h"
-#include "fuelecon.h"
-#include "ioconfig.h"
-#include "secu3.h"
+#ifndef _WDT_H_
+#define _WDT_H_
 
-/** Open/Close FE valve (открывает/закрывает клапан ЭМР) */
-#define SET_FE_VALVE_STATE(s) IOCFG_SET(IOP_FE, s)
+/** Starts watchdog timer if it is not started yet */
+void wdt_start_timer(void);
 
-void fuelecon_init_ports(void)
-{
- //Output for control FE valve (выход для управления клапаном ЭМР)
- IOCFG_INIT(IOP_FE, 0); //FE valve is off (ЭМР выключен)
-}
+/** Reset watchdog timer */
+void wdt_reset_timer(void);
 
-void fuelecon_control(struct ecudata_t* d)
-{
- int16_t discharge;
+/** Reset device using watchdog */
+void wdt_reset_device(void);
 
- discharge = (d->param.map_upper_pressure - d->sens.map);
- if (discharge < 0)
-  discharge = 0;
- d->fe_valve = discharge < d->param.fe_on_threshold;
- SET_FE_VALVE_STATE(d->fe_valve);
-}
+#endif //_WDT_H_

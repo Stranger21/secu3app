@@ -72,12 +72,19 @@ either IAR(MS Windows) or GCC(Linux, MS Windows).
                          (Разрешить использование ДПДЗ PA5)
 
     BL_BAUD_RATE         Baud rate for boot loader. Can be set to 9600, 14400,
-                         19200, 28800, 38400, 57600
+                         19200, 28800, 38400, 57600. Note! Will not take effect without
+                         reprogramming using ISP programmator.
                          (Скорость передачи данных для загрузчика)
 
     THERMISTOR_CS        Use a resistive temperature sensor
                          (Используется датчик температуры охлаждающей жидкости
                          резистивного типа)
+
+    SECU3T               Build for SECU-3T unit. Additional functionality will be added
+                         (Сборка под блок SECU-3T. Добавляется доп. функциональность)
+
+    DIAGNOSTICS          Include hardware diagnostics functionality
+                         (Включить поддержку диагностики аппаратной части)
 
 Necessary symbols you can define in the preprocessor's options of compiler
 (edit corresponding Makefile).

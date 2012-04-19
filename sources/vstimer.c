@@ -53,6 +53,9 @@ volatile s_timer16_t save_param_timeout_counter = 0;      //!< used for saving o
 #ifdef FUEL_PUMP
 volatile s_timer16_t fuel_pump_time_counter = 0;          //!< used for fuel pump
 #endif
+#ifdef IDL_REGUL
+volatile s_timer8_t idl_regul_time_counter = 0;           //!< used for idl regulator
+#endif
 
 /**for division, to achieve 10ms, because timer overflovs each 2 ms */
 uint8_t divider = DIVIDER_RELOAD;
@@ -73,6 +76,10 @@ ISR(TIMER2_OVF_vect)
 
  _ENABLE_INTERRUPT();
 
+#ifdef IDL_REGUL
+  s_timer_update(idl_regul_time_counter);           //!< used for idl regulator 2ms update
+#endif
+ 
  if (divider > 0)
   --divider;
  else

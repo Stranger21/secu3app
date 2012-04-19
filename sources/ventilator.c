@@ -29,11 +29,21 @@
 #include "port/intrinsic.h"
 #include "port/port.h"
 #include "bitmask.h"
+#include "ioconfig.h"
 #include "secu3.h"
 #include "ventilator.h"
 
-/**Turns on/off cooling fan*/
-#define SET_COOLINGFAN_STATE(s) {PORTB_Bit1 = s;}
+/**Turns on/off cooling fan
+ * This is redundant definitions (see ioconfig.c), but it is opportunity to
+ * speed up corresponding ISR
+ */
+#ifdef SECU3T /*SECU-3T*/
+ #define COOLINGFAN_TURNON()  {PORTD_Bit7 = 0;}
+ #define COOLINGFAN_TURNOFF() {PORTD_Bit7 = 1;}
+#else         /*SECU-3*/
+ #define COOLINGFAN_TURNON()  {PORTB_Bit1 = 1;}
+ #define COOLINGFAN_TURNOFF() {PORTB_Bit1 = 0;}
+#endif
 
 /**Warning must be the same as another definition in vstimer.h!*/
 #define TIMER2_RELOAD_VALUE  6
@@ -49,9 +59,7 @@ volatile uint8_t pwm_duty;  //!< current duty value
 
 void vent_init_ports(void)
 {
- //configure used I/O ports
- PORTB&= ~_BV(PB1);
- DDRB |= _BV(DDB1);
+ IOCFG_INIT(IOP_ECF, 0); //coolong fan is turned Off
 }
 
 void vent_init_state(void)
@@ -72,21 +80,21 @@ void vent_set_duty(uint8_t duty)
  //We don't need interrupts if duty is 0 or 100%
  if (duty == 0)
  {
-  _DISABLE_INTERRUPT(); 
+  _DISABLE_INTERRUPT();
   TIMSK&=~_BV(OCIE2);
   _ENABLE_INTERRUPT();
-  SET_COOLINGFAN_STATE(0);
+  COOLINGFAN_TURNOFF();
  }
  else if (duty == PWM_STEPS)
  {
-  _DISABLE_INTERRUPT(); 
+  _DISABLE_INTERRUPT();
   TIMSK&=~_BV(OCIE2);
   _ENABLE_INTERRUPT();
-  SET_COOLINGFAN_STATE(1);
+  COOLINGFAN_TURNON();
  }
  else
  {
-  _DISABLE_INTERRUPT(); 
+  _DISABLE_INTERRUPT();
   TIMSK|=_BV(OCIE2);
   _ENABLE_INTERRUPT();
  }
@@ -97,13 +105,13 @@ ISR(TIMER2_COMP_vect)
 {
  if (0 == pwm_state)
  { //start active part
-  SET_COOLINGFAN_STATE(1);
+  COOLINGFAN_TURNON();
   OCR2+= pwm_duty;
   ++pwm_state;
  }
  else
  { //start passive part
-  SET_COOLINGFAN_STATE(0);
+  COOLINGFAN_TURNOFF();
   OCR2+= (PWM_STEPS - pwm_duty);
   --pwm_state;
  }
@@ -113,14 +121,16 @@ ISR(TIMER2_COMP_vect)
 //sensor is present in system
 void vent_control(struct ecudata_t *d)
 {
- if (!d->param.tmp_use)
+ //exit if coolant temperature sensor is disabled or there is no I/O assigned to
+ //electric cooling fan
+ if (!d->param.tmp_use || !IOCFG_CHECK(IOP_ECF))
   return;
 
 #ifndef COOLINGFAN_PWM
  if (d->sens.temperat >= d->param.vent_on)
-  SET_COOLINGFAN_STATE(1);
+  COOLINGFAN_TURNON();
  if (d->sens.temperat <= d->param.vent_off)
-  SET_COOLINGFAN_STATE(0);
+  COOLINGFAN_TURNOFF();
 #else //PWM mode
  if (!d->param.vent_pwm)
  {

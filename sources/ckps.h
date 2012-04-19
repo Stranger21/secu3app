@@ -33,7 +33,7 @@
  * so it should be a multiple of degree of 2 (коэффициент масштабирования углов поворота коленвала, фигурирует
  * в вычислениях и операциях деления поэтому он должен быть кратен степени 2).
  */
-#define ANGLE_MULTIPLAYER            32
+#define ANGLE_MULTIPLAYER   32
 
 /**Initialization of CKP module (hardware & variables)
  * (инициализирет структуру данных/состояния ДПКВ и железо на которое он мапится)
@@ -118,7 +118,7 @@ void ckps_init_state_variables(void);
 uint8_t ckps_get_current_cog(void);
 
 /** \return returns 1 if number of current tooth has been changed
- *          (возвращает 1, если номер текущего зуба изменился)
+ *  (возвращает 1, если номер текущего зуба изменился)
  */
 uint8_t ckps_is_cog_changed(void);
 

@@ -39,7 +39,11 @@
 /**Reads state of throttle gate (only the value, without inversion)
  * считывает состояние дроссельной заслонки (только значение, без инверсии)
  */
-#define GET_THROTTLE_GATE_STATE(s) (PINC_Bit5)
+#ifdef SECU3T  /*SECU-3T*/
+ #define GET_THROTTLE_GATE_STATE() (PINA_Bit7)
+#else          /*SECU-3*/
+ #define GET_THROTTLE_GATE_STATE() (PINC_Bit5)
+#endif
 
 /**Number of values for averaging of RPM for tachometer
  * кол-во значений для усреднения частоты вращения к.в. для оборотов тахометра */
@@ -160,7 +164,7 @@ void meas_initial_measure(struct ecudata_t* d)
  _ENABLE_INTERRUPT();
  do
  {
-  adc_begin_measure();
+  adc_begin_measure(0); //<--normal speed
   while(!adc_is_measure_ready());
 
   meas_update_values_buffers(d, 0); //<-- all

@@ -19,34 +19,27 @@
               email: shabelnikov@secu-3.org
 */
 
-/** \file fuelecon.c
- * Implementation of controlling algorithms for Fuel Economizer (FE)
- * (Реализация алгоритмов управления Экономайзером Мощностных Режимов (ЭМР)).
+/** \file diagnost.h
+ * Hardware diagnostics
+ * (Диагностика аппаратной части).
  */
 
-#include "port/avrio.h"
-#include "port/port.h"
-#include "bitmask.h"
-#include "fuelecon.h"
-#include "ioconfig.h"
-#include "secu3.h"
+#ifndef _DIAGNOSTICS_H_
+#define _DIAGNOSTICS_H_
 
-/** Open/Close FE valve (открывает/закрывает клапан ЭМР) */
-#define SET_FE_VALVE_STATE(s) IOCFG_SET(IOP_FE, s)
+#ifdef DIAGNOSTICS
 
-void fuelecon_init_ports(void)
-{
- //Output for control FE valve (выход для управления клапаном ЭМР)
- IOCFG_INIT(IOP_FE, 0); //FE valve is off (ЭМР выключен)
-}
+struct ecudata_t;
 
-void fuelecon_control(struct ecudata_t* d)
-{
- int16_t discharge;
+/** Start diagnostics */
+void diagnost_start(void);
 
- discharge = (d->param.map_upper_pressure - d->sens.map);
- if (discharge < 0)
-  discharge = 0;
- d->fe_valve = discharge < d->param.fe_on_threshold;
- SET_FE_VALVE_STATE(d->fe_valve);
-}
+/** Stop diagnostics */
+void diagnost_stop(void);
+
+/** Contains diagnostic loop */
+void diagnost_process(struct ecudata_t* d);
+
+#endif //DIAGNOSTICS
+
+#endif //_DIAGNOSTICS_H_

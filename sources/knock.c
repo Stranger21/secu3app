@@ -48,29 +48,38 @@
 
 
 //SO status values
-#define KSP_SO_TERMINAL_ACTIVE 0x00 //!< code for activation of SO terminal
-#define KSP_SO_TERMINAL_HIZ    0x01 //!< code for deactivation of SO terminal
-
-//channel selection values
-#define KSP_CHANNEL_0          0x00 //!< code for select 0 channel
-#define KSP_CHANNEL_1          0x01 //!< code for select 1 channel
+#define KSP_SO_TERMINAL_ACTIVE 0x00   //!< code for activation of SO terminal
+#define KSP_SO_TERMINAL_HIZ    0x01   //!< code for deactivation of SO terminal
 
 //prescaler
-#define KSP_PRESCALER_4MHZ     0x00 //!< code for setup prescaler
+#define KSP_PRESCALER_4MHZ     0x00   //!< code for setup prescaler (4mHz crystal)
+#define KSP_PRESCALER_16MHZ    0x0C   //!< code for setup prescaler (16mHz crystal)
 
+#define KSP_CS PORTB_Bit4             //!< SS controls chip selection
+#ifdef SECU3T /*SECU-3T*/
+ #define KSP_INTHOLD PORTC_Bit4       //!< Switches between integration/hold modes
+#else         /*SECU-3*/
+ #define KSP_INTHOLD PORTD_Bit3
+#endif
+#define KSP_TEST PORTB_Bit3           //!< Switches chip into diagnostic mode
 
-#define KSP_CS PORTB_Bit4        //!< SS controls chip selection
-#define KSP_INTHOLD PORTD_Bit3   //!< Switches between integration/hold modes
-#define KSP_TEST PORTB_Bit3      //!< Switches chip into diagnostic mode
-
+//4 and 16 mHz crystals can be used (4mHz is default value)
+#if defined(Z1_CRYSTAL_16MHZ) | defined(SECU3T)
+ #define KSP_PRESCALER_VALUE KSP_PRESCALER_16MHZ  //!< set prescaler for 16mHz crystal
+#else
+ #define KSP_PRESCALER_VALUE KSP_PRESCALER_4MHZ   //!< set prescaler for 4mHz crystal
+#endif
 
 /**This data structure intended for duplication of data of current state
  * of signal processor */
 typedef struct
 {
  uint8_t ksp_bpf;                       //!< band pass frequency
- volatile uint8_t ksp_gain;             //!< gain
+ volatile uint8_t ksp_gain;             //!< attenuator gain
  volatile uint8_t ksp_inttime;          //!< integrator's time constant
+#ifdef SECU3T
+ volatile uint8_t ksp_channel;          //!< current channel number (2 channels are available)
+#endif
  volatile uint8_t ksp_interrupt_state;  //!< for state machine executed inside interrupt handler
  uint8_t ksp_error;                     //!< stores errors flags
  volatile uint8_t ksp_last_word;        //!< used to control of latching
@@ -95,7 +104,7 @@ void knock_set_integration_mode(uint8_t mode)
 uint8_t knock_module_initialize(void)
 {
  uint8_t i, response;
- uint8_t init_data[2] = {KSP_SET_PRESCALER | KSP_PRESCALER_4MHZ | KSP_SO_TERMINAL_ACTIVE,
+ uint8_t init_data[2] = {KSP_SET_PRESCALER | KSP_PRESCALER_VALUE | KSP_SO_TERMINAL_ACTIVE,
                          KSP_SET_CHANNEL | KSP_CHANNEL_0};
  uint8_t _t;
 
@@ -198,6 +207,15 @@ void knock_set_int_time_constant(uint8_t inttime)
  _END_ATOMIC_BLOCK();
 }
 
+#ifdef SECU3T
+void knock_set_channel(uint8_t channel)
+{
+ _BEGIN_ATOMIC_BLOCK();
+ ksp.ksp_channel = KSP_SET_CHANNEL | (channel & 0x01);
+ _END_ATOMIC_BLOCK();
+}
+#endif
+
 uint8_t knock_is_error(void)
 {
  return ksp.ksp_error;
@@ -239,6 +257,7 @@ ISR(SPI_STC_vect)
    SPDR = ksp.ksp_last_word = ksp.ksp_inttime;
    break;
 
+#ifndef SECU3T
   case 3: //Int.Time loaded
    if (t!=ksp.ksp_last_word)
     ksp.ksp_error = 1;
@@ -246,13 +265,38 @@ ISR(SPI_STC_vect)
    SPCR&= ~_BV(SPIE);
    ksp.ksp_interrupt_state = 0;
    break;
+#else /*SECU-3T*/
+  case 3: //Int.Time loaded
+   KSP_CS = 0;
+   ksp.ksp_interrupt_state = 4;
+   if (t!=ksp.ksp_last_word)
+    ksp.ksp_error = 1;
+   SPDR = ksp.ksp_last_word = ksp.ksp_channel;
+   break;
+
+  case 4: //channel number loaded
+   if (t!=ksp.ksp_last_word)
+    ksp.ksp_error = 1;
+   //disable interrupt and switch state machine into initial state - ready to new load
+   SPCR&= ~_BV(SPIE);
+   ksp.ksp_interrupt_state = 0;
+   break;
+#endif
  }
 }
 
 void knock_init_ports(void)
 {
  PORTB|= _BV(PB4)|_BV(PB3); //interface with HIP9011 turned off (CS=1, TEST=1, MOSI=0, SCK=0)
+#ifdef SECU3T
+ PORTC&=~_BV(PC4);
+#else
  PORTD&=~_BV(PD3);          //INT/~HOLD = 0 (hold mode)
+#endif
  DDRB |= _BV(DDB7)|_BV(DDB5)|_BV(DDB4)|_BV(DDB3);
+#ifdef SECU3T
+ DDRC |= _BV(DDC4);
+#else
  DDRD |= _BV(DDD3);
+#endif
 }

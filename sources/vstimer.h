@@ -85,6 +85,10 @@ extern volatile s_timer16_t save_param_timeout_counter;
 #ifdef FUEL_PUMP
 extern volatile s_timer16_t fuel_pump_time_counter;
 #endif
+#ifdef IDL_REGUL
+extern volatile s_timer8_t idl_regul_time_counter;           //!< used for idl regulator
+#endif
+
 //////////////////////////////////////////////////////////////////
 
 #endif //_VSTIMER_H_

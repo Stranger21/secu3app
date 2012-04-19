@@ -28,22 +28,19 @@
 #include "port/port.h"
 #include "bitmask.h"
 #include "ce_errors.h"
+#include "ioconfig.h"
 #include "secu3.h"
 #include "starter.h"
 #include "vstimer.h"
 
-/** Blocks/unblocks starter (блокирует/разблокирывает стартер) */
-#define SET_STARTER_BLOCKING_STATE(s) {PORTD_Bit7 = s;}
-
 void starter_set_blocking_state(uint8_t i_state)
 {
- SET_STARTER_BLOCKING_STATE(i_state);
+ IOCFG_SET(IOP_ST_BLOCK, !i_state);
 }
 
 void starter_init_ports(void)
 {
- PORTD|= _BV(PD7);    //starter is blocked (стартер заблокирован)
- DDRD |= _BV(DDD7);   //Output for starter (выход для стартера)
+ IOCFG_INIT(IOP_ST_BLOCK, 0); //starter is blocked (стартер заблокирован)
 }
 
 void starter_control(struct ecudata_t* d)
@@ -52,22 +49,22 @@ void starter_control(struct ecudata_t* d)
  //control of starter's blocking (starter is blocked after reaching the specified RPM, but will not turn back!)
  //управление блокировкой стартера (стартер блокируется после достижения указанных оборотов, но обратно не включается!)
  if (d->sens.frequen4 > d->param.starter_off)
-  SET_STARTER_BLOCKING_STATE(1);
+  starter_set_blocking_state(1);
 #else
  //control of starter's blocking (starter is blocked at speeds greater than the threshold)
  //and status indication of idle economizer valve (output of starter's blocking is used)
  //(управление блокировкой стартера (стартер блокируется при оборотах больше пороговых)
  //и индикация состояния клапана ЭПХХ (используется выход блокировки стартера))
- SET_STARTER_BLOCKING_STATE( (d->sens.frequen4 > d->param.starter_off)&&(d->ie_valve) ? 1 : 0);
+ starter_set_blocking_state( (d->sens.frequen4 > d->param.starter_off)&&(d->ie_valve) ? 1 : 0);
 
  //if air flow is maximum - turn on CE and start timer
  //(если расход воздуха максимальный - зажигаем СЕ и запускаем таймер)
  if (d->airflow > 15)
  {
   s_timer_set(ce_control_time_counter, CE_CONTROL_STATE_TIME_VALUE);
-  ce_set_state(1);
+  ce_set_state(CE_STATE_ON);
  }
 #endif
  if (d->sens.frequen4 < 30)
-  SET_STARTER_BLOCKING_STATE(0); //unblock starter (снимаем блокировку стартера)
+  starter_set_blocking_state(0); //unblock starter (снимаем блокировку стартера)
 }
