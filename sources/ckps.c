@@ -275,30 +275,23 @@ void ckps_init_ports(void)
  //поэтому устанавливаем на их входах низкий уровень)
 #ifndef INVERSE_IGN_OUTPUTS
  PORTD|= _BV(PD5)|_BV(PD4)|_BV(PD6); // 1st and 2nd ignition channels, pullup for ICP1 (1-й и 2-й каналы зажигания, подтяжка для ICP1)
-#ifndef IDL_REGUL
  IOCFG_INIT(IOP_IGN_OUT3, 1);        //init 3-rd ignition channel if allowed
  IOCFG_INIT(IOP_IGN_OUT4, 1);        //init 4-th ...
  IOCFG_INIT(IOP_ADD_IO1, 1);         //init 5-th ...
  IOCFG_INIT(IOP_ADD_IO2, 1);         //init 6-th ...
-
-#endif
-
 #else //outputs inversion mode (режим инверсии выходов)
  PORTD|= _BV(PD6);
  PORTD&= ~(_BV(PD5)|_BV(PD4));
-#ifndef IDL_REGUL
  IOCFG_INIT(IOP_IGN_OUT3, 0);        //init 3-rd ignition channel if allowed
  IOCFG_INIT(IOP_IGN_OUT4, 0);        //init 4-th ...
  IOCFG_INIT(IOP_ADD_IO1, 0);         //init 5-th ...
- IOCFG_INIT(IOP_ADD_IO2, 0);         //init 6-th ..
-
-#endif
-
+ IOCFG_INIT(IOP_ADD_IO2, 0);         //init 6-th ...
 #endif //INVERSE_IGN_OUTPUTS
 
  //PD5,PD4,PC1,PC0 must be configurated as outputs (должны быть сконфигурированы как выходы)
  DDRD|= _BV(DDD5)|_BV(DDD4); //1-2 ignition channels - for 2 and 4 cylinder engines (1-2 каналы зажигания - для 2 и 4 ц. двигателей)
 }
+
 //Calculation of instantaneous frequency of crankshaft rotation from the measured period between the cycles of the engine
 //(for example for 4-cylinder, 4-stroke it is 180 degrees) 
 //Period measured in the discretes of timer (one discrete = 4us), one minute = 60 seconds, one second has 1,000,000 us.
@@ -469,7 +462,7 @@ void ckps_set_merge_outs(uint8_t i_merge)
 {
  ckps.chan_mask = i_merge ? 0x00 : 0xFF;
 }
-#ifndef IDL_REGUL
+
 #ifndef PHASED_IGNITION
 /**Helpful macro.
  * Generates end of accumulation pulse (moment of spark) for 1st,2nd,3rd,4th channels correspondingly
@@ -483,7 +476,6 @@ void ckps_set_merge_outs(uint8_t i_merge)
    break;\
   case 3: PORTC |= _BV(PC1);\
    break;}
-
 
 /**Helpful macro.
  * Generates end of ignition drive pulse for 1st,2nd,3rd,4th channels correspondingly
@@ -562,77 +554,6 @@ void ckps_set_merge_outs(uint8_t i_merge)
 
 #endif
 
-#else
-
-#ifndef PHASED_IGNITION
-/**Helpful macro.
- * Generates end of accumulation pulse (moment of spark) for 1st,2nd,3rd,4th channels correspondingly
- * (Вспомогательный макрос. Конец импульса накачки (момент искры) для 1-го,2-го,3-го,4-го каналов соответственно). */
-#define TURNON_IGN_CHANNELS(){\
-  case 0: PORTD |= _BV(PD4);\
-   break;\
-  case 1: PORTD |= _BV(PD5);\
-   break;}
- 
-
-/**Helpful macro.
- * Generates end of ignition drive pulse for 1st,2nd,3rd,4th channels correspondingly
- * (Вспомогательный макрос. Конец импульса запуска зажигания для 1-го,2-го,3-го,4-го каналов соответственно) */
-#define TURNOFF_IGN_CHANNELS(){\
- case 0: PORTD &= ~_BV(PD4);\
-  break;\
- case 1: PORTD &= ~_BV(PD5);\
-  break;}
-
-#else //phased ignition
-
-/**Helpful macro.
- * Generates end of accumulation pulse (moment of spark) in phased ignition mode
- */
-#define TURNON_IGN_CHANNELS(){\
- case 0:\
-  if (0==(chanstate[0].chan_cyl & ckps.chan_mask))\
-   PORTD |= _BV(PD4);\
-  else if (1==chanstate[0].chan_cyl)\
-   PORTD |= _BV(PD5);\
-  else\
-   PORTD |= (_BV(PD4) | _BV(PD5));\
-  break;\
- case 2:\
-  if (0==chanstate[2].chan_cyl)\
-   PORTC |= _BV(PC5);\
-  else if (1==chanstate[2].chan_cyl)\
-   PORTA |= _BV(PA4);\
-  else {\
-   PORTC |= _BV(PC5); PORTA |= _BV(PA4);\
-   }\
-  break;}
-
-/**Helpful macro.
- * Generates end of ignition drive pulse in phased ignition mode
- */
-#define TURNOFF_IGN_CHANNELS(){\
- case 0:\
-  if (0==(chanstate[0].chan_cyl & ckps.chan_mask))\
-   PORTD &= ~_BV(PD4);\
-  else if (1==chanstate[0].chan_cyl)\
-   PORTD &= ~_BV(PD5);\
-  else\
-   PORTD &= ~(_BV(PD4) | _BV(PD5));\
- break;\
- case 2:\
-  if (0==chanstate[2].chan_cyl)\
-   PORTC &= ~_BV(PC5);\
-  else if (1==chanstate[2].chan_cyl)\
-   PORTA &= ~_BV(PA4);\
-  else {\
-   PORTC &= ~_BV(PC5); PORTA &= ~_BV(PA4);\
-   }\ 
- break;}
- 
-#endif
-
-#endif //IDL_REGUL
 /** Turn OFF specified ignition channel
  * \param i_channel number of ignition channel to turn off
  */
@@ -821,16 +742,15 @@ void process_ckps_cogs(void)
 {
  uint16_t diff;
  uint8_t i, timsk_sv = TIMSK;
-
-//вывод имитатора ДХ используем выход стартера , функции блокировки выключены должны быть
+ 
+ //вывод имитатора ДХ используем выход стартера , функции блокировки выключены должны быть
 
 if (ckps.cog == CKPS_DX_OUT_COG1) starter_set_blocking_state(1); 
 if (ckps.cog == CKPS_DX_OUT_COG2) starter_set_blocking_state(0);
 if (ckps.cog == CKPS_DX_OUT_COG3) starter_set_blocking_state(1);
 if (ckps.cog == CKPS_DX_OUT_COG4) starter_set_blocking_state(0);
 
- 
- 
+
  //-----------------------------------------------------
  //Software PWM is very sensitive even to small delays. So, we need to allow OCF2 and TOV2
  //interrupts occur during processing of this handler.

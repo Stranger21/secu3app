@@ -308,10 +308,10 @@ MAIN()
 
    //Ограничиваем быстрые изменения УОЗ, он не может изменится больше чем на определенную величину
    //за один рабочий цикл. В режиме пуска фильтр УОЗ отключен.
-  // if (EM_START == edat.engine_mode)
+   if (EM_START == edat.engine_mode)
     edat.curr_angle = advance_angle_inhibitor_state = calc_adv_ang;
-  // else
- //   edat.curr_angle = advance_angle_inhibitor(calc_adv_ang, &advance_angle_inhibitor_state, edat.param.angle_inc_spead, edat.param.angle_dec_spead);
+   else
+    edat.curr_angle = advance_angle_inhibitor(calc_adv_ang, &advance_angle_inhibitor_state, edat.param.angle_inc_spead, edat.param.angle_dec_spead);
 
    //----------------------------------------------
    if (edat.param.knock_use_knock_channel)

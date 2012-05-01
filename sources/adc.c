@@ -228,7 +228,11 @@ ISR(ADC_vect)
  {
   case ADCI_MAP: //закончено измерение абсолютного давления
    adc.map_value = ADC;
+#ifdef TPS_SENSOR     
    ADMUX = ADCI_TPS|ADC_VREF_TYPE;
+#else
+   ADMUX = ADCI_UBAT|ADC_VREF_TYPE;
+#endif   
    SETBIT(ADCSRA,ADSC);
    break;
    

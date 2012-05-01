@@ -90,40 +90,12 @@ typedef struct f_data_t
   uint8_t name[F_NAME_SIZE];                        //!< ассоциированное имя (имя семейства) (assosiated name, displayed in user interface)
 }f_data_t;
 
-typedef uint16_t fnptr_t;                //!< Special type for function pointers
-#define IOREM_SLOTS 10                   //!< Number of slots used for I/O remapping
-#define IOREM_PLUGS 12                   //!< Number of plugs used in I/O remapping
-
-/**Describes all data related to I/O remapping */
-typedef struct iorem_slots_t
-{
- fnptr_t i_slots[IOREM_SLOTS];           //!< initialization slots
- fnptr_t v_slots[IOREM_SLOTS];           //!< data slots
- fnptr_t s_stub;                         //!< special pointer used as stub
- fnptr_t reserved;                       //!< reserved
- fnptr_t i_plugs[IOREM_PLUGS];           //!< initialization plugs
- fnptr_t v_plugs[IOREM_PLUGS];           //!< data plugs
-}iorem_slots_t;
 
 /**Describes additional data stored in the firmware
  * Описывает дополнительные данные хранимые в прошивке
  */
 typedef struct fw_ex_data_t
 {
-  /**Эти зарезервированные байты необходимы для сохранения бинарной совместимости
-   * новых версий прошивок с более старыми версиями. При добавлении новых данных
-   * в структуру, необходимо расходовать эти байты.
-   * Following reserved bytes required for keeping binary compatibility between
-   * different versions of firmware. Useful when you add/remove members to/from
-   * this structure. */
-  uint8_t reserved[33];
-
-  /*Push new fields here, consuming bytes from above field*/
-
-  /** Arrays which are used for I/O remapping. Some arrays are "slots", some are "plugs"
-   * Массивы используемые для переназначения выводов.*/
-  iorem_slots_t iorem;
-
   /**Signature information (contains information about firmware) */
   uint8_t fw_signature_info[FW_SIGNATURE_INFO_SIZE];
 
@@ -138,9 +110,16 @@ typedef struct fw_ex_data_t
   /**Used for checking compatibility with management software. Holds size of all data stored in the firmware. */
   uint16_t fw_data_size;
 
-  /**Holds flags which give information about options were used to build firmware
-   * (хранит флаги дающие информацию о том с какими опциями была скомпилирована прошивка) */
-  uint32_t config;
+  /**Reserved 32-bit value*/
+  uint32_t reserv32;
+
+  /**Эти зарезервированные байты необходимы для сохранения бинарной совместимости
+   * новых версий прошивок с более старыми версиями. При добавлении новых данных
+   * в структуру, необходимо расходовать эти байты.
+   * Following reserved bytes required for keeping binary compatibility between
+   * different versions of firmware. Useful when you add/remove members to/from
+   * this structure. */
+  uint8_t reserved[58];
 }fw_ex_data_t;
 
 /**Описывает параметры системы
@@ -217,7 +196,7 @@ typedef struct params_t
   uint8_t  ign_cutoff;                   //!< Cutoff ignition when RPM reaches specified threshold
   uint16_t ign_cutoff_thrd;              //!< Cutoff threshold (RPM)
 
-  uint8_t  zero_adv_ang;                 //!< Zero anvance angle flag
+  uint8_t  zero_adv_ang;                 //!< Zero advance angle flag
   uint8_t  merge_ign_outs;               //!< Merge ignition sugnals to single output flag
 
   /**Эти зарезервированные байты необходимы для сохранения бинарной совместимости
@@ -229,23 +208,58 @@ typedef struct params_t
   uint8_t  reserved[4];
 
   /**Контрольная сумма данных этой структуры (для проверки корректности данных после считывания из EEPROM)
+   * Для данных этой структуры хранимых в прошивке данное поле хранит не контрольную сумму, а размер данных
+   * прошивки.
    * CRC of data of this structure (for checking correctness of data after loading from EEPROM) */
   uint16_t crc;
-  
-  
- // uint16_t user_var1;
-  //uint16_t user_var2;
-  
+
 }params_t;
+
+//Define data structures are related to code area data and IO remapping data
+typedef uint16_t fnptr_t;                //!< Special type for function pointers
+#define IOREM_SLOTS 10                   //!< Number of slots used for I/O remapping
+#define IOREM_PLUGS 16                   //!< Number of plugs used in I/O remapping
+
+/**Describes all data related to I/O remapping */
+typedef struct iorem_slots_t
+{
+ uint8_t size;                           //!< size of this structure
+ uint8_t reserved;                       //!< a reserved byte
+ fnptr_t i_slots[IOREM_SLOTS];           //!< initialization slots
+ fnptr_t v_slots[IOREM_SLOTS];           //!< data slots
+ fnptr_t i_plugs[IOREM_PLUGS];           //!< initialization plugs
+ fnptr_t v_plugs[IOREM_PLUGS];           //!< data plugs
+ fnptr_t s_stub;                         //!< special pointer used as stub
+ fnptr_t reserved_ptr;                   //!< reserved
+}iorem_slots_t;
+
+/**Describes all the data residing directly in the code area.*/
+typedef struct cd_data_t
+{
+ /** Arrays which are used for I/O remapping. Some arrays are "slots", some are "plugs"
+  * Массивы используемые для переназначения выводов.*/
+ iorem_slots_t iorem;
+
+ /**Holds flags which give information about options were used to build firmware
+  * (хранит флаги дающие информацию о том с какими опциями была скомпилирована прошивка) */
+ uint32_t config;
+
+ uint8_t reserved[2];                    //!< Two reserved bytes
+
+ uint8_t size;                           //!< size of this structure
+}cd_data_t;
+
 
 /**Описывает все данные находящиеся в прошивке 
  * Describes all data residing in firmware */
 typedef struct fw_data_t
 {
+ cd_data_t cddata;                       //!< All data which is strongly coupled with code (Эти данные жестко связаны с кодом прошивки)
+ //following fields are belong to data area, not to the code area:
  fw_ex_data_t exdata;                    //!< Дополнительные данные Additional data in the firmware
  params_t def_param;                     //!< Резервные параметры Reserve parameters (loaded when instance in EEPROM is broken)
  f_data_t tables[TABLES_NUMBER];         //!< Таблицы УОЗ Array of tables of advance angle
- uint16_t code_crc;                      //!< Check sum of whole firmware (except this check sum and boot loader)
+ uint16_t code_crc;                      //!< Check sum of the whole firmware (except this check sum and boot loader)
 }fw_data_t;
 
 //================================================================================
@@ -276,7 +290,6 @@ typedef struct fw_data_t
 /** Адрес данных в прошивке
  * Address of data in the firmware */
 #define FIRMWARE_DATA_START (SECU3BOOTSTART-sizeof(fw_data_section_t))
-
 //================================================================================
 //Variables:
 
