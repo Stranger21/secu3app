@@ -52,7 +52,7 @@ void iocfg_s_ecf(uint8_t value)
 void iocfg_i_st_block(uint8_t value)
 {
 #ifdef SECU3T /*SECU-3T*/
- PORTB_Bit1 = value;
+ PORTB_Bit1 = !value;
  DDRB |= _BV(DDB1);
 #else         /*SECU-3*/
  PORTD_Bit7 = value;
@@ -63,7 +63,7 @@ void iocfg_i_st_block(uint8_t value)
 void iocfg_s_st_block(uint8_t value)
 {
 #ifdef SECU3T /*SECU-3T*/
- PORTB_Bit1 = value;
+ PORTB_Bit1 = !value;
 #else         /*SECU-3*/
  PORTD_Bit7 = value;
 #endif
