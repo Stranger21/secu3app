@@ -364,7 +364,6 @@ int16_t temp_adc_to_c(int16_t adcvalue)
 {
  if (adcvalue < 0)
   adcvalue = 0;
-//user_var3 = adcvalue;
  return (adcvalue - ((int16_t)((TSENS_ZERO_POINT / ADC_DISCRETE)+0.5)) );
 }
 #else

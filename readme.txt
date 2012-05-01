@@ -60,7 +60,7 @@ either IAR(MS Windows) or GCC(Linux, MS Windows).
 
     PHASE_SENSOR         Use of phase (cam) sensor
                          (разрешить использование датчика фаз)
-   
+
 
     PHASED_IGNITION      Use phased ignition. PHASE_SENSOR must be also used.
                          (разрешить фазированное зажигание)

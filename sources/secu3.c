@@ -68,7 +68,7 @@ struct ecudata_t edat;
 void control_engine_units(struct ecudata_t *d)
 {
  //реализация функции ЭПХХ.
- //idlecon_control(d);
+ idlecon_control(d);
 
  //управление блокировкой стартера
  //starter_control(d);
