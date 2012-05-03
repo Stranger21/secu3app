@@ -71,13 +71,13 @@ void control_engine_units(struct ecudata_t *d)
  idlecon_control(d);
 
  //управление блокировкой стартера
- //starter_control(d);
+ starter_control(d);
 
  //управление электро вентилятором охлаждения двигателя, при условии что ДТОЖ присутствует в системе
- //vent_control(d);
+ vent_control(d);
 
  //Управление ЭМР (экономайзер мощностных режимов)
- //fuelecon_control(d);
+ fuelecon_control(d);
 
 #ifdef FUEL_PUMP
  //Controlling of electric fuel pump (Управление электробензонасосом)
@@ -195,6 +195,9 @@ MAIN()
  ckps_use_knock_channel(edat.param.knock_use_knock_channel);
  ckps_set_cogs_btdc(edat.param.ckps_cogs_btdc); //<--now valid initialization
  ckps_set_merge_outs(edat.param.merge_ign_outs);
+#ifdef HALL_OUTPUT
+ ckps_set_hall_pulse(edat.param.hop_start_cogs, edat.param.hop_durat_cogs);
+#endif
 
  s_timer_init();
  vent_init_state();

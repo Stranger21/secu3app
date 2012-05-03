@@ -1,3 +1,4 @@
+
     SECU-3 Application software. Distributed under GPL license
 
     Designed by Alexey A. Shabelnikov 2007. Ukraine, Gorlovka.
@@ -85,6 +86,10 @@ either IAR(MS Windows) or GCC(Linux, MS Windows).
 
     DIAGNOSTICS          Include hardware diagnostics functionality
                          (Включить поддержку диагностики аппаратной части)
+
+    HALL_OUTPUT          Include Hall sensor emulation functionality. Separate output
+                         will be used.
+                         (Включить поддержку эмуляции сигнала с Датчика Холла)
 
 Necessary symbols you can define in the preprocessor's options of compiler
 (edit corresponding Makefile).
