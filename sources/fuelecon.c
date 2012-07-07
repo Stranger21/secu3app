@@ -31,6 +31,7 @@
 #include "ioconfig.h"
 #include "secu3.h"
 
+
 /** Open/Close FE valve (открывает/закрывает клапан Ёћ–) */
 #define SET_FE_VALVE_STATE(s) IOCFG_SET(IOP_FE, s)
 
@@ -49,4 +50,9 @@ void fuelecon_control(struct ecudata_t* d)
   discharge = 0;
  d->fe_valve = discharge < d->param.fe_on_threshold;
  SET_FE_VALVE_STATE(d->fe_valve);
+}
+
+void fe_valve_state(uint8_t i_state)
+{
+SET_FE_VALVE_STATE(i_state);
 }

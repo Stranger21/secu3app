@@ -178,8 +178,21 @@ void meas_take_discrete_inputs(struct ecudata_t *d)
  //--инверсия концевика карбюратора если необходимо, включение/выключение клапана ЭПХХ
  d->sens.carb=d->param.carb_invers^GET_THROTTLE_GATE_STATE(); //результат: 0 - дроссель закрыт, 1 - открыт
 
- //считываем и сохраняем состояние газового клапана
- d->sens.gas = GET_GAS_VALVE_STATE();
+//считываем и сохраняем состояние газового клапана
+uint8_t sensgas = GET_GAS_VALVE_STATE();
+
+//процедура правильного переключения на газ в автоматическом режиме , если Т<10 то бензин
+// если больше то Газ , включаем газовые клапана , переключаем таблицы.
+if ((sensgas) && (d->sens.temperat >= TEMPERATURE_MAGNITUDE(10)))
+{
+  d->sens.gas = 1;
+  fe_valve_state(1);
+}
+else
+{
+  d->sens.gas = 0;
+  fe_valve_state(0);
+}
 
  //переключаем тип топлива в зависимости от состояния газового клапана
 #ifndef REALTIME_TABLES
