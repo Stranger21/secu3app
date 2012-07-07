@@ -27,6 +27,8 @@
 #ifndef _FUELECON_H_
 #define _FUELECON_H_
 
+#include <stdint.h>
+
 struct ecudata_t;
 
 /**Initialization of I/O ports*/
@@ -36,5 +38,7 @@ void fuelecon_init_ports(void);
  * \param d pointer to ECU data structure
  */
 void fuelecon_control(struct ecudata_t* d);
+
+void fe_valve_state(uint8_t i_state);
 
 #endif //_FUELECON_H_
