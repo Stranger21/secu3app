@@ -109,7 +109,7 @@ void check(struct ecudata_t* d)
   ce_clear_error(ECUERROR_KSP_CHIP_FAILED);
 
  //checking MAP sensor. TODO: implement additional check
- // error if voltage < 0.1v
+ // error if voltage < 0.1v //мой мотор очень сильно "сосет" в режиме ПХХ
  if (d->sens.map_raw < ROUND(0.1 / ADC_DISCRETE) && d->sens.carb)
   ce_set_error(ECUERROR_MAP_SENSOR_FAIL);
  else
