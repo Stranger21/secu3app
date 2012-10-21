@@ -19,29 +19,24 @@
               email: shabelnikov@secu-3.org
 */
 
-#ifndef _SECU3_AVRIO_H_
-#define _SECU3_AVRIO_H_
+/** \file pwrrelay.h
+ * Power management using external relay, allows SECU-3 to be turned on some time
+ * after ignition is off. So, for instance electric colling fan can work even ignition is off
+ * (Управление питанием используя внешнее реле, позволяет SECU-3 оставаться включенным еще
+ * некоторое время после выключения зажигания).
+ */
 
-#ifdef __ICCAVR__
- #include <ioavr.h>     //device IO
+#ifndef _PWRRELAY_H_
+#define _PWRRELAY_H_
 
-#else //AVR GCC
- #include <avr/io.h>    //device IO
+struct ecudata_t;
 
- //Who can tell me why I must do this?
- #ifdef __AVR_ATmega64__
-  #ifndef EE_RDY_vect
-   #define EE_RDY_vect EE_READY_vect
-  #endif
- #endif
+/** Initialization of used I/O ports (инициализация используемых портов) */
+void pwrrelay_init_ports(void);
 
- //Again...
- #ifdef __AVR_ATmega64__
-  #ifndef USART0_RXC_vect
-   #define USART0_RXC_vect USART0_RX_vect
-  #endif
- #endif
+/** Control of power relay (управление реле питания)
+ * \param d pointer to ECU data structure
+ */
+void pwrrelay_control(struct ecudata_t* d);
 
-#endif
-
-#endif //_SECU3_AVRIO_H_
+#endif //_PWRRELAY_H_

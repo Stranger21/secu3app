@@ -31,7 +31,8 @@
 #include "bitmask.h"
 #include "camsens.h"
 
-#ifdef PHASE_SENSOR
+//Functionality added when either PHASE_SENSOR or SECU3T is defined
+#if defined(PHASE_SENSOR) || defined(SECU3T)
 
 #ifndef SECU3T /*SECU-3*/
  /** Get logic level from cam sensor output */
@@ -48,8 +49,10 @@ typedef struct
 #endif
  uint8_t err_threshold;               //!< error threshold in teeth
  volatile uint8_t err_counter;        //!< teeth counter
- CamCallback edg_callback;            //!< Callback function to call on cam edge
- CamCallback err_callback;            //!< Callback function to call on error (cam is missing)
+ volatile uint8_t event;              //!< flag which indicates Hall cam sensor's event
+#ifdef SECU3T
+ volatile uint8_t vr_event;           //!< flag which indicates VR cam sensor's event
+#endif
 }camstate_t;
 
 /** Global instance of cam sensor state variables */
@@ -63,31 +66,65 @@ void cams_init_state_variables(void)
  camstate.cam_ok = 0; //not Ok
  camstate.err_threshold = 60 * 2;
  camstate.err_counter = 0;
+ camstate.event = 0;
+#ifdef SECU3T
+ camstate.vr_event = 0;
+#endif
 }
 
 void cams_init_state(void)
 {
  _BEGIN_ATOMIC_BLOCK();
  cams_init_state_variables();
- camstate.edg_callback = 0;
- camstate.err_callback = 0;
  camstate.cam_error = 0; //no errors
 
 #ifdef SECU3T /*SECU-3T*/
  //interrupt by rising edge
  MCUCR|= _BV(ISC11) | _BV(ISC10);
- GICR|=_BV(INT1);
+ MCUCR|= _BV(ISC01) | _BV(ISC00);
+#ifdef PHASE_SENSOR
+ GICR|=  _BV(INT0) | _BV(INT1); //INT1 enabled only when cam sensor is utilized in the firmware
+#else
+ GICR|=  _BV(INT0);             //это нам нужно для ДНО
+#endif
 #endif
 
  _END_ATOMIC_BLOCK();
 }
 
-void cams_set_callbacks(CamCallback p_edg_callback, CamCallback p_err_callback)
+#ifdef SECU3T /*SECU-3T*/
+uint8_t cams_vr_is_event_r(void)
 {
- camstate.edg_callback = p_edg_callback;
- camstate.err_callback = p_err_callback;
+ uint8_t result;
+ _BEGIN_ATOMIC_BLOCK();
+ result = camstate.vr_event;
+ camstate.vr_event = 0; //reset event flag
+ _END_ATOMIC_BLOCK();
+ return result;
 }
 
+/**Interrupt from CAM sensor (VR). Marked as REF_S on the schematics */
+ISR(INT0_vect)
+{
+ camstate.vr_event = 1; //set event flag 
+//GICR&=~_BV(INT0);     //disable interrupt to improve noise immunity
+}
+
+void cams_vr_set_edge_type(uint8_t edge_type)
+{
+ _BEGIN_ATOMIC_BLOCK();
+ if (edge_type)
+  MCUCR|= _BV(ISC00); //rising
+ else
+  MCUCR&= ~_BV(ISC00);//falling
+ _END_ATOMIC_BLOCK();
+}
+#endif //SECU3T
+#endif //defined(PHASE_SENSOR) || defined(SECU3T)
+
+
+//Functionality added to compilation only when PHASE_SENSOR defined
+#ifdef PHASE_SENSOR
 void cams_set_error_threshold(uint8_t threshold)
 {
  camstate.err_threshold = threshold;
@@ -104,8 +141,7 @@ void cams_detect_edge(void)
    camstate.cam_ok = 1;
    camstate.err_counter = 0;
    camstate.prev_level = level;
-   if (camstate.edg_callback)
-    camstate.edg_callback();
+   camstate.event = 1;
    return; //detected
   }
  }
@@ -116,8 +152,6 @@ void cams_detect_edge(void)
   camstate.cam_ok = 0;
   camstate.cam_error = 1;
   camstate.err_counter = 0;
-  if (camstate.err_callback)
-   camstate.err_callback();
  }
 
 #ifndef SECU3T /*SECU-3*/
@@ -140,15 +174,23 @@ void cams_reset_error(void)
  camstate.cam_error = 0;
 }
 
+uint8_t cams_is_event_r(void)
+{
+ uint8_t result;
+ _BEGIN_ATOMIC_BLOCK();
+ result = camstate.event;
+ camstate.event = 0; //reset event flag
+ _END_ATOMIC_BLOCK();
+ return result;
+}
+
 #ifdef SECU3T /*SECU-3T*/
-/**Interrupt from CAM sensor */
+/**Interrupt from CAM sensor (Hall)*/
 ISR(INT1_vect)
 {
  camstate.cam_ok = 1;
  camstate.err_counter = 0;
- if (camstate.edg_callback)
-  camstate.edg_callback();
+ camstate.event = 1; //set event flag
 }
-#endif
-
+#endif //SECU3T
 #endif //PHASE_SENSOR

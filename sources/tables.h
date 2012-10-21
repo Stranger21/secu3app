@@ -25,15 +25,20 @@
  */
 
 /* —труктура распределени€ пам€ти программ блока управлени€ SECU-3
- * Structure of program memory's allocation of SECU-3 firmware
- *        ________________________
- *       |                        |
- *       |       код              |
- *       |       code             |
- *       |------------------------|
- *       | свободное пространство |
- *       |   free space           |
- *       |------------------------|<--- новые данные и структуры добавл€ть с этого адреса
+ * Structure of program memory's allocation of the SECU-3 firmware
+ *     _  ________________________
+ *  c |  |                        |
+ *  o |  |       код              |
+ *  d |  |       code             |
+ *  e |  |------------------------|
+ *    |  | свободное пространство |
+ *  a |  |   free space           |
+ *  r |  |                        |
+ *  e |  |------------------------|<--- данные жестко св€занные с кодом (хран€тс€ в области кода)
+ *  a |  |                        |     data which is strongly coupled with code (stored in code area)
+ *    |  |                        |
+ *    |  |                        |
+ *    |_ |------------------------|<--- новые данные и структуры добавл€ть с этого адреса
  *       |                        |     place new data from here going to code
  *       | дополнительные парам.  |
  *       |additional data (param.)|
@@ -73,6 +78,7 @@
 #define KC_ATTENUATOR_LOOKUP_TABLE_SIZE 128         //!< number of points in attenuator's lookup table
 #define FW_SIGNATURE_INFO_SIZE          48          //!< number of bytes reserved for firmware's signature information
 #define COIL_ON_TIME_LOOKUP_TABLE_SIZE  32          //!< number of points in lookup table used for dwell control
+#define THERMISTOR_LOOKUP_TABLE_SIZE    16          //!< Size of lookup table for coolant temperature sensor
 
 /** оличество наборов таблиц хранимых в пам€ти программ
  * Number of sets of tables stored in the firmware */
@@ -110,8 +116,16 @@ typedef struct fw_ex_data_t
   /**Used for checking compatibility with management software. Holds size of all data stored in the firmware. */
   uint16_t fw_data_size;
 
-  /**Reserved 32-bit value*/
+  /**A reserved 32-bit value*/
   uint32_t reserv32;
+
+  /**Coolant temperature sensor lookup table 
+   * (таблица значений температуры с шагом по напр€жению) */
+  int16_t cts_curve[THERMISTOR_LOOKUP_TABLE_SIZE];
+  /**Voltage corresponding to the beginning of axis*/
+  uint16_t cts_vl_begin;
+  /**Voltage corresponding to the end of axis*/
+  uint16_t cts_vl_end;
 
   /**Ёти зарезервированные байты необходимы дл€ сохранени€ бинарной совместимости
    * новых версий прошивок с более старыми верси€ми. ѕри добавлении новых данных
@@ -119,7 +133,7 @@ typedef struct fw_ex_data_t
    * Following reserved bytes required for keeping binary compatibility between
    * different versions of firmware. Useful when you add/remove members to/from
    * this structure. */
-  uint8_t reserved[58];
+  uint8_t reserved[22];
 }fw_ex_data_t;
 
 /**ќписывает параметры системы
@@ -202,13 +216,20 @@ typedef struct params_t
   int8_t   hop_start_cogs;               //!< Hall output: start of pulse in teeth relatively to TDC 
   uint8_t  hop_durat_cogs;               //!< Hall output: duration of pulse in teeth
 
+  uint8_t  cts_use_map;                  //!< Flag which indicates using of lookup table for coolant temperature sensor
+
+  uint8_t  ckps_cogs_num;                //!< number of crank wheel's teeth 
+  uint8_t  ckps_miss_num;                //!< number of missing crank wheel's teeth
+
+  uint8_t  ref_s_edge_type;              //!< Edge type of REF_S input (тип фронта ƒЌќ)
+
   /**Ёти зарезервированные байты необходимы дл€ сохранени€ бинарной совместимости
    * новых версий прошивок с более старыми верси€ми. ѕри добавлении новых данных
    * в структуру, необходимо расходовать эти байты.
    * Following reserved bytes required for keeping binary compatibility between
    * different versions of firmware. Useful when you add/remove members to/from
    * this structure. */
-  uint8_t  reserved[2];
+  uint8_t  reserved[31];
 
   /** онтрольна€ сумма данных этой структуры (дл€ проверки корректности данных после считывани€ из EEPROM)
    * ƒл€ данных этой структуры хранимых в прошивке данное поле хранит не контрольную сумму, а размер данных
@@ -283,7 +304,7 @@ typedef struct fw_data_t
 
 /** оличество наборов таблиц которые можно редактировать в реальном времени
  * Ёти таблицы сохран€ютс€ в EEPROM.
- * Number of sets of tables allowed to be tuned in the read time */
+ * Number of sets of tables allowed to be tuned in the real time */
 #ifdef REALTIME_TABLES
  #define TUNABLE_TABLES_NUMBER 2
 #else
@@ -298,5 +319,10 @@ typedef struct fw_data_t
 
 /**¬се данные прошивки All firmware data */
 PGM_FIXED_ADDR_OBJ(extern fw_data_t fw_data, ".firmware_data");
+
+#ifdef REALTIME_TABLES
+/**Default data for tunable tables stored in the EEPROM */
+PGM_DECLARE(extern f_data_t tt_def_data[]);
+#endif
 
 #endif //_TABLES_H_

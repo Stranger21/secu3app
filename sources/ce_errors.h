@@ -79,17 +79,22 @@ void ce_clear_errors(void);
 void ce_init_ports(void);
 
 #ifdef SECU3T  /*SECU-3T*/
+#ifdef REV9_BOARD
+ #define CE_STATE_ON  1
+ #define CE_STATE_OFF 0
+#else
  #define CE_STATE_ON  0
  #define CE_STATE_OFF 1
+#endif
 #else          /*SECU-3*/
  #define CE_STATE_ON  1
  #define CE_STATE_OFF 0
 #endif
 
 /**Turns on/off CE lamp (включает/выключает лампу Check Engine).*/
-#define ce_set_state(s) {PORTB_Bit2 = s;}
+#define ce_set_state(s) WRITEBIT(PORTB, PB2, s)
 
 /**Retrieves state of CE lamp (Получает состояние лампы CE). */
-#define ce_get_state() (PINB_Bit2)
+#define ce_get_state() (CHECKBIT(PINB, PINB2) > 0)
 
 #endif //_CE_ERRORS_H_

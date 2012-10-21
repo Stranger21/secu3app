@@ -110,7 +110,7 @@ PGM_DECLARE(uint8_t hdig[]) = "0123456789ABCDEF";
 
 //--------вспомогательные функции для построения пакетов-------------
 
-/**Appends sender's buffer by sequence of bytes from programm memory 
+/**Appends sender's buffer by sequence of bytes from program memory 
  * note! can NOT be used for binary data! */
 #define build_fs(src, size) \
 { \
@@ -132,7 +132,7 @@ PGM_DECLARE(uint8_t hdig[]) = "0123456789ABCDEF";
 /**Appends sender's buffer by two HEX bytes
  * \param i 8-bit value to be converted into hex
  */
-void build_i8h(uint8_t i)
+static void build_i8h(uint8_t i)
 {
  uart.send_buf[uart.send_size++] = PGM_GET_BYTE(&hdig[i/16]);    //старший байт HEX числа
  uart.send_buf[uart.send_size++] = PGM_GET_BYTE(&hdig[i%16]);    //младший байт HEX числа
@@ -141,7 +141,7 @@ void build_i8h(uint8_t i)
 /**Appends sender's buffer by 4 HEX bytes
  * \param i 16-bit value to be converted into hex
  */
-void build_i16h(uint16_t i)
+static void build_i16h(uint16_t i)
 {
  uart.send_buf[uart.send_size++] = PGM_GET_BYTE(&hdig[_AB(i,1)/16]);    //старший байт HEX числа (старший байт)
  uart.send_buf[uart.send_size++] = PGM_GET_BYTE(&hdig[_AB(i,1)%16]);    //младший байт HEX числа (старший байт)
@@ -152,15 +152,22 @@ void build_i16h(uint16_t i)
 /**Appends sender's buffer by 8 HEX bytes
  * \param i 32-bit value to be converted into hex
  */
-void build_i32h(uint32_t i)
+static void build_i32h(uint32_t i)
 {
  build_i16h(i>>16);
  build_i16h(i);
 }
 
+/**Appends sender's buffer by sequence of bytes from program memory buffer
+ * can be used for binary data */
+static void build_fb(uint8_t _PGM *romBuffer, uint8_t size)
+{
+ while(size--) build_i8h(PGM_GET_BYTE(romBuffer++));
+}
+
 /**Appends sender's buffer by sequence of bytes from RAM buffer
  * can be used for binary data */
-void build_rb(const uint8_t* ramBuffer, uint8_t size)
+static void build_rb(const uint8_t* ramBuffer, uint8_t size)
 {
  while(size--) build_i8h(*ramBuffer++);
 }
@@ -168,7 +175,7 @@ void build_rb(const uint8_t* ramBuffer, uint8_t size)
 //----------вспомагательные функции для распознавания пакетов---------
 /**Recepts sequence of bytes from receiver's buffer and places it into the RAM buffer
  * can NOT be used for binary data */
-void recept_rs(uint8_t* ramBuffer, uint8_t size)
+static void recept_rs(uint8_t* ramBuffer, uint8_t size)
 { 
  if (size > uart.recv_size)
   size = uart.recv_size;
@@ -181,7 +188,7 @@ void recept_rs(uint8_t* ramBuffer, uint8_t size)
 /**Retrieves from receiver's buffer 8-bit value
  * \return retrieved value
  */
-uint8_t recept_i8h(void)
+static uint8_t recept_i8h(void)
 {
  uint8_t i8;
  i8 = HTOD(uart.recv_buf[uart.recv_index])<<4;
@@ -194,7 +201,7 @@ uint8_t recept_i8h(void)
 /**Retrieves from receiver's buffer 16-bit value
  * \return retrieved value
  */
-uint16_t recept_i16h(void)
+static uint16_t recept_i16h(void)
 {
  uint16_t i16;
  _AB(i16,1) = (HTOD(uart.recv_buf[uart.recv_index]))<<4;
@@ -211,7 +218,7 @@ uint16_t recept_i16h(void)
 /**Retrieves from receiver's buffer 32-bit value
  * \return retrieved value
  */
-uint32_t recept_i32h(void)
+static uint32_t recept_i32h(void)
 {
  uint32_t i = 0;
  i = recept_i16h();
@@ -222,7 +229,7 @@ uint32_t recept_i32h(void)
 
 /**Recepts sequence of bytes from receiver's buffer and places it into the RAM buffer
  * can be used for binary data */
-void recept_rb(uint8_t* ramBuffer, uint8_t size)
+static void recept_rb(uint8_t* ramBuffer, uint8_t size)
 {
  uint8_t rcvsize = uart.recv_size >> 1; //two hex symbols per byte
  if (size > rcvsize)
@@ -232,7 +239,7 @@ void recept_rb(uint8_t* ramBuffer, uint8_t size)
 //--------------------------------------------------------------------
 
 /**Makes sender to start sending */
-void uart_begin_send(void)
+static void uart_begin_send(void)
 {
  uart.send_index = 0;
  _DISABLE_INTERRUPT();
@@ -259,6 +266,7 @@ void uart_send_packet(struct ecudata_t* d, uint8_t send_mode)
   case TEMPER_PAR:
    build_i4h(d->param.tmp_use);
    build_i4h(d->param.vent_pwm);
+   build_i4h(d->param.cts_use_map);
    build_i16h(d->param.vent_on);
    build_i16h(d->param.vent_off);
    break;
@@ -372,10 +380,13 @@ void uart_send_packet(struct ecudata_t* d, uint8_t send_mode)
 
   case CKPS_PAR:
    build_i4h(d->param.ckps_edge_type);
+   build_i4h(d->param.ref_s_edge_type);
    build_i8h(d->param.ckps_cogs_btdc);
    build_i8h(d->param.ckps_ignit_cogs);
    build_i8h(d->param.ckps_engine_cyl);
    build_i4h(d->param.merge_ign_outs);
+   build_i8h(d->param.ckps_cogs_num);
+   build_i8h(d->param.ckps_miss_num);
    break;
 
   case OP_COMP_NC:
@@ -471,6 +482,22 @@ void uart_send_packet(struct ecudata_t* d, uint8_t send_mode)
   }
 #endif
 
+  case ATTTAB_PAR:
+  {
+   //проверяем чтобы размер таблицы был кратен 16
+#if (KC_ATTENUATOR_LOOKUP_TABLE_SIZE % 16)
+ #error "KC_ATTENUATOR_LOOKUP_TABLE_SIZE must be a number divisible by 16, if not, you have to change the code below!"
+#endif
+   static uint8_t tab_index = 0;
+   build_i8h(tab_index * 16);
+   build_fb(&fw_data.exdata.attenuator_table[tab_index * 16], 16);
+   if (tab_index >= (KC_ATTENUATOR_LOOKUP_TABLE_SIZE / 16) - 1)
+    tab_index = 0;
+   else
+    ++tab_index; 
+   break;
+  }
+
 #ifdef DEBUG_VARIABLES
   case DBGVAR_DAT:
    build_i16h(user_var1);
@@ -539,6 +566,7 @@ uint8_t uart_recept_packet(struct ecudata_t* d)
   case TEMPER_PAR:
    d->param.tmp_use   = recept_i4h();
    d->param.vent_pwm  = recept_i4h();
+   d->param.cts_use_map = recept_i4h();
    d->param.vent_on   = recept_i16h();
    d->param.vent_off  = recept_i16h();
    break;
@@ -603,10 +631,13 @@ uint8_t uart_recept_packet(struct ecudata_t* d)
 
   case CKPS_PAR:
    d->param.ckps_edge_type = recept_i4h();
+   d->param.ref_s_edge_type = recept_i4h();
    d->param.ckps_cogs_btdc  = recept_i8h();
    d->param.ckps_ignit_cogs = recept_i8h();
    d->param.ckps_engine_cyl = recept_i8h();
    d->param.merge_ign_outs = recept_i4h();
+   d->param.ckps_cogs_num = recept_i8h();
+   d->param.ckps_miss_num = recept_i8h();
    break;
 
   case OP_COMP_NC:

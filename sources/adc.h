@@ -30,23 +30,14 @@
 
 #include <stdint.h>
 
-extern uint16_t user_var3;
-
 /**одна дискрета АЦП в вольтах */
 #define ADC_DISCRETE            0.0025
 
 /**наклон прямой датчика температуры вольт/градус */
 #define TSENS_SLOPP             0.01
 
-#ifndef THERMISTOR_CS
 /**напряжение на выходе датчика температуры при 0 градусов цельсия */
- #define TSENS_ZERO_POINT        2.73
-#else
- /**Voltage which corresponds to minimum temperature */
- #define TSENS_V_TMIN            4.37
- /**Voltage which is step between interpolation nodes in table */
- #define TSENS_STEP              0.27
-#endif
+#define TSENS_ZERO_POINT        2.73
 
 /**константа для выбора источника опорного напряжения */
 #define ADC_VREF_TYPE           0xC0
@@ -105,7 +96,7 @@ uint16_t adc_get_knock_value(void);
 
 #ifdef TPS_SENSOR
 /** Получение последнего измеренного значения сигнала ДПДЗ
- * \return значение в дискретах АЦП
+* \return значение в дискретах АЦП
  */
 uint16_t adc_get_tps_value(void);
 #endif
@@ -173,22 +164,11 @@ uint16_t ubat_adc_to_v(int16_t adcvalue);
  */
 uint16_t tps_adc_to_v(int16_t adcvalue);
 #endif
-#ifndef THERMISTOR_CS
 /**Converts ADV value into phisical magnituge - temperature (given from linear sensor)
  * Переводит значение АЦП в физическую величину - температура, для линейного датчика
  * \param adcvalue Voltage from sensor (напряжение с датчика - значение в дискретах АЦП)
  * \return физическая величина * TEMP_PHYSICAL_MAGNITUDE_MULTIPLAYER
  */
 int16_t temp_adc_to_c(int16_t adcvalue);
-#else
-/**Converts ADC value into phisical magnitude - temperature (given from thermistor)
- * (переводит значение АЦП в физическую величину - температура для резистивного датчика (термистор))
- * \param start Voltage value at lowest temperature in ADC discretes (значение напряжения при минимальной температуре в дискретах АЦП)
- * \param step Voltage step in ADC discretes (значение шага по напряжению в таблице , в дискретах АЦП)
- * \param adcvalue Voltage from sensor (напряжение с датчика - значение в дискретах АЦП))
- * \return физическая величина * TEMP_PHYSICAL_MAGNITUDE_MULTIPLAYER
- */
-int16_t thermistor_lookup(uint16_t start, uint16_t step, uint16_t adcvalue);
-#endif
 
 #endif //_ADC_H_

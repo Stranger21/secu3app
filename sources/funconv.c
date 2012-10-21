@@ -210,7 +210,7 @@ int16_t coolant_function(struct ecudata_t* d)
 //Регулятор холостого хода РХХ
  uint16_t user_var1;
  uint16_t user_var2;
-// uint16_t user_var3;
+ uint16_t user_var3;
 /**Describes state data for idling regulator */
 typedef struct
 {
@@ -386,5 +386,36 @@ uint16_t accumulation_time(struct ecudata_t* d)
 
  return simple_interpolation(voltage, PGM_GET_WORD(&fw_data.exdata.coil_on_time[i]), PGM_GET_WORD(&fw_data.exdata.coil_on_time[i1]), 
         (i * VOLTAGE_MAGNITUDE(0.4)) + VOLTAGE_MAGNITUDE(5.4), VOLTAGE_MAGNITUDE(0.4)) >> 4;
+}
+#endif
+
+#ifdef THERMISTOR_CS
+//Coolant sensor is thermistor (тип датчика температуры - термистор)
+//Note: We assume that voltage on the input of ADC depend on thermistor's resistance linearly.
+//Voltage on the input of ADC can be calculated as following:
+// U3=U1*Rt*R2/(Rp(Rt+R1+R2)+Rt(R1+R2));
+// Rt - thermistor, Rp - pulls up thermistor to voltage U1,
+// R1,R2 - voltage divider resistors.
+int16_t thermistor_lookup(uint16_t adcvalue)
+{
+ int16_t i, i1;
+
+ //Voltage value at the start of axis in ADC discretes (значение напряжения в начале оси в дискретах АЦП)
+ uint16_t v_start = PGM_GET_WORD(&fw_data.exdata.cts_vl_begin);
+ //Voltage value at the end of axis in ADC discretes (значение напряжения в конце оси в дискретах АЦП)
+ uint16_t v_end = PGM_GET_WORD(&fw_data.exdata.cts_vl_end);
+
+ uint16_t v_step = (v_end - v_start) / (THERMISTOR_LOOKUP_TABLE_SIZE - 1);
+
+ if (adcvalue < v_start)
+  adcvalue = v_start;
+
+ i = (adcvalue - v_start) / v_step;
+
+ if (i >= THERMISTOR_LOOKUP_TABLE_SIZE-1) i = i1 = THERMISTOR_LOOKUP_TABLE_SIZE-1;
+ else i1 = i + 1;
+
+ return (simple_interpolation(adcvalue, PGM_GET_WORD(&fw_data.exdata.cts_curve[i]), PGM_GET_WORD(&fw_data.exdata.cts_curve[i1]),
+        (i * v_step) + v_start, v_step)) >> 4;
 }
 #endif

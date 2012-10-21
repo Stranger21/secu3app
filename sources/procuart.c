@@ -29,6 +29,7 @@
 #include "port/port.h"
 #include <stdint.h>
 #include "bitmask.h"
+#include "camsens.h"
 #include "ce_errors.h"
 #include "ckps.h"
 #include "diagnost.h"
@@ -96,7 +97,7 @@ void process_uart_interface(struct ecudata_t* d)
      sop_set_operation(SOP_LOAD_TABLSET);
      _AB(d->op_actn_code, 0) = 0; //обработали
     }
-    if (_AB(d->op_actn_code, 0) == OPCODE_SAVE_TABLSET) //приняли команду сохранения сохранения набора таблиц для указанного типа топлива
+    if (_AB(d->op_actn_code, 0) == OPCODE_SAVE_TABLSET) //приняли команду сохранения набора таблиц для указанного типа топлива
     {
      sop_set_operation(SOP_SAVE_TABLSET);
      _AB(d->op_actn_code, 0) = 0; //обработали
@@ -105,7 +106,7 @@ void process_uart_interface(struct ecudata_t* d)
 #ifdef DIAGNOSTICS
     if (_AB(d->op_actn_code, 0) == OPCODE_DIAGNOST_ENTER) //"enter diagnostic mode" command has been received
     {
-     //this function will send confirmation answer and start diagnostic mode (it will has its own separate loop)     
+     //this function will send confirmation answer and start diagnostic mode (it will has its own separate loop)
      diagnost_start();
      _AB(d->op_actn_code, 0) = 0; //обработали
     }
@@ -125,7 +126,11 @@ void process_uart_interface(struct ecudata_t* d)
    case CKPS_PAR:
     //если были изменены параметры ДПКВ, то немедленно применяем их на работающем двигателе и сбрасываем счетчик времени
     ckps_set_cyl_number(d->param.ckps_engine_cyl);  //<--обязательно в первую очередь!
+    ckps_set_cogs_num(d->param.ckps_cogs_num, d->param.ckps_miss_num);
     ckps_set_edge_type(d->param.ckps_edge_type);
+#ifdef SECU3T
+    cams_vr_set_edge_type(d->param.ref_s_edge_type); //REF_S (ДНО)
+#endif
     ckps_set_cogs_btdc(d->param.ckps_cogs_btdc);
     ckps_set_merge_outs(d->param.merge_ign_outs);
 

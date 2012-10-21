@@ -32,12 +32,6 @@ either IAR(MS Windows) or GCC(Linux, MS Windows).
                          для индикации состояния клапана ЭПХХ используется выход
                          блокировки стартера
 
-
-    WHEEL_36_1           For using 36-1 crank (60-2 used by default)
-                         для использования зубчатого диска 36-1 (по умолчанию 
-                         60-2)
-
-
     INVERSE_IGN_OUTPUTS  Use for to invert ignition outputs
                          для инвертирования выходов управления зажиганием
 
@@ -84,12 +78,18 @@ either IAR(MS Windows) or GCC(Linux, MS Windows).
     SECU3T               Build for SECU-3T unit. Additional functionality will be added
                          (Сборка под блок SECU-3T. Добавляется доп. функциональность)
 
+    REV9_BOARD           Build for SECU-3T boards of revision 9 and greater.
+                         (Сборка для плат SECU-3T ревизии 9 и выше)
+
     DIAGNOSTICS          Include hardware diagnostics functionality
                          (Включить поддержку диагностики аппаратной части)
 
     HALL_OUTPUT          Include Hall sensor emulation functionality. Separate output
                          will be used.
                          (Включить поддержку эмуляции сигнала с Датчика Холла)
+
+    STROBOSCOPE          Include stroboscope functionality
+                         (Включить поддержку стробоскопа)
 
 Necessary symbols you can define in the preprocessor's options of compiler
 (edit corresponding Makefile).

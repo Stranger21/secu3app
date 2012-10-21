@@ -50,6 +50,7 @@
 #include "measure.h"
 #include "params.h"
 #include "procuart.h"
+#include "pwrrelay.h"
 #include "secu3.h"
 #include "starter.h"
 #include "suspendop.h"
@@ -86,6 +87,9 @@ void control_engine_units(struct ecudata_t *d)
 #ifdef IDL_REGUL
  if (idl_start_en) idlregul_control(d);
 #endif 
+
+ //power management
+ pwrrelay_control(d);
 }
 
 /**Initialization of variables and data structures 
@@ -135,6 +139,7 @@ MAIN()
  ce_init_ports();
  knock_init_ports();
  jumper_init_ports();
+ pwrrelay_init_ports();
 
  //если код программы испорчен - зажигаем СЕ
  if (crc16f(0, CODE_SIZE)!=PGM_GET_WORD(&fw_data.code_crc))
@@ -173,8 +178,8 @@ MAIN()
  //инициализируем UART
  uart_init(edat.param.uart_divisor);
 
- //initialization of cam module
-#ifdef PHASE_SENSOR
+ //initialization of cam module, must precede ckps initialization
+#if defined(PHASE_SENSOR) || defined(SECU3T)
  cams_init_state();
 #endif
 
@@ -186,7 +191,11 @@ MAIN()
  //инициализируем модуль ДПКВ
  ckps_init_state();
  ckps_set_cyl_number(edat.param.ckps_engine_cyl);
+ ckps_set_cogs_num(edat.param.ckps_cogs_num, edat.param.ckps_miss_num);
  ckps_set_edge_type(edat.param.ckps_edge_type);
+#ifdef SECU3T
+ cams_vr_set_edge_type(edat.param.ref_s_edge_type); //REF_S edge (Фронт ДНО)
+#endif
  ckps_set_cogs_btdc(edat.param.ckps_cogs_btdc); //<--only partial initialization
 #ifndef DWELL_CONTROL
  ckps_set_ignition_cogs(edat.param.ckps_ignit_cogs);
@@ -219,7 +228,7 @@ MAIN()
    //TODO: Сделать мягкую отсечку для избавления от нежелательной искры. Как?
 #endif
    ckps_init_state_variables();
-#ifdef PHASE_SENSOR
+#if defined(PHASE_SENSOR) || defined(SECU3T)
    cams_init_state_variables();
 #endif
    edat.engine_mode = EM_START; //режим пуска
@@ -232,8 +241,8 @@ MAIN()
   }
 
   //запускаем измерения АЦП, через равные промежутки времени. При обнаружении каждого рабочего
-  //цикла этот таймер переинициализируется. Таким образом, когда частота вращения двигателя превысит
-  //определенную величину, это условие выполнятся перестанет.
+  //такта этот таймер переинициализируется. Таким образом, когда частота вращения двигателя превысит
+  //определенную величину, то это условие перестанет выполняться.
   if (s_timer_is_action(force_measure_timeout_counter))
   {
    if (!edat.param.knock_use_knock_channel)
@@ -303,14 +312,14 @@ MAIN()
 #endif
   //------------------------------------------------------------------------
 
-  //выполняем операции которые необходимо выполнять строго для каждого рабочего цикла.
-  if (ckps_is_cycle_cutover_r())
+  //выполняем операции которые необходимо выполнять строго для каждого рабочего такта.
+  if (ckps_is_stroke_event_r())
   {
    meas_update_values_buffers(&edat, 0);
    s_timer_set(force_measure_timeout_counter, FORCE_MEASURE_TIMEOUT_VALUE);
 
    //Ограничиваем быстрые изменения УОЗ, он не может изменится больше чем на определенную величину
-   //за один рабочий цикл. В режиме пуска фильтр УОЗ отключен.
+   //за один рабочий такт. В режиме пуска фильтр УОЗ отключен.
    if (EM_START == edat.engine_mode)
     edat.curr_angle = advance_angle_inhibitor_state = calc_adv_ang;
    else
@@ -326,7 +335,7 @@ MAIN()
     edat.knock_retard = 0;
    //----------------------------------------------
 
-   //сохраняем УОЗ для реализации в ближайшем по времени цикле зажигания
+   //сохраняем УОЗ для реализации в ближайшем по времени такте зажигания
    ckps_set_advance_angle(edat.curr_angle);
 
    //управляем усилением аттенюатора в зависимости от оборотов
@@ -334,7 +343,7 @@ MAIN()
     knock_set_gain(knock_attenuator_function(&edat));
 
    // индицирование этих ошибок прекращаем при начале вращения двигателя
-   //(при прошествии N-го количества циклов)
+   //(при прошествии N-го количества тактов)
    if (turnout_low_priority_errors_counter == 1)
    {
     ce_clear_error(ECUERROR_EEPROM_PARAM_BROKEN);

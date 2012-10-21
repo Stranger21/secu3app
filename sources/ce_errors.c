@@ -45,10 +45,13 @@ typedef struct
  uint16_t ecuerrors;         //!< 16 error codes maximum (максимум 16 кодов ошибок)
  uint16_t merged_errors;     //!< caching errors to preserve resource of the EEPROM (кеширует ошибки для сбережения ресурса EEPROM)
  uint16_t write_errors;      //!< ф. eeprom_start_wr_data() launches background process! (запускает фоновый процесс!)
+ uint16_t bv_tdc;            //!< board voltage debouncong counter for eliminating of false errors during normal transients
+ uint8_t  bv_eds;            //!< board voltage error detecting state, used for state machine
+ uint8_t  bv_dev;            //!< board voltage deviation flag, if 0, then voltage is below normal, if 1, then voltage is above normal
 }ce_state_t;
 
 /**State variables */
-ce_state_t ce_state = {0,0,0};
+ce_state_t ce_state = {0,0,0,0,0,0};
 
 //operations under errors (операции над ошибками)
 /*#pragma inline*/
@@ -118,30 +121,72 @@ void check(struct ecudata_t* d)
 #ifndef THERMISTOR_CS
   // error if (2.28v > voltage > 3.93v)
   if (d->sens.temperat_raw < ROUND(2.28 / ADC_DISCRETE) || d->sens.temperat_raw > ROUND(3.93 / ADC_DISCRETE))
-#else
-  // error if (0.2v > voltage > 4.7v) for thermistor
-  if (d->sens.temperat_raw < ROUND(0.2 / ADC_DISCRETE) || d->sens.temperat_raw > ROUND(4.7 / ADC_DISCRETE))
-#endif
    ce_set_error(ECUERROR_TEMP_SENSOR_FAIL);
   else
    ce_clear_error(ECUERROR_TEMP_SENSOR_FAIL);
+#else
+  if (!d->param.cts_use_map) //use linear sensor
+  {
+   if (d->sens.temperat_raw < ROUND(2.28 / ADC_DISCRETE) || d->sens.temperat_raw > ROUND(3.93 / ADC_DISCRETE))
+    ce_set_error(ECUERROR_TEMP_SENSOR_FAIL);
+   else
+    ce_clear_error(ECUERROR_TEMP_SENSOR_FAIL);
+  }
+  else
+  {
+   // error if (0.2v > voltage > 4.7v) for thermistor
+   if (d->sens.temperat_raw < ROUND(0.2 / ADC_DISCRETE) || d->sens.temperat_raw > ROUND(4.7 / ADC_DISCRETE))
+    ce_set_error(ECUERROR_TEMP_SENSOR_FAIL);
+   else
+    ce_clear_error(ECUERROR_TEMP_SENSOR_FAIL);
+  }
+#endif
  }
  else
   ce_clear_error(ECUERROR_TEMP_SENSOR_FAIL);
 
- //checking voltqage
- // error if voltage < 4.5v
- if ( (d->sens.voltage_raw < ROUND(4.5 / ADC_DISCRETE)) ||
-  (d->sens.voltage_raw < ROUND(12.0 / ADC_DISCRETE) && d->sens.inst_frq > 2500) ||
-  (d->sens.voltage_raw > ROUND(16.0 / ADC_DISCRETE)) )
-  ce_set_error(ECUERROR_VOLT_SENSOR_FAIL);
- else
-  ce_clear_error(ECUERROR_VOLT_SENSOR_FAIL);
+ //checking the voltage using simple state machine
+ if (0==ce_state.bv_eds) //voltage is OK
+ {
+  if (d->sens.voltage_raw < ROUND(12.0 / ADC_DISCRETE))
+  { //below normal
+   ce_state.bv_dev = 0, ce_state.bv_eds = 1;
+  }
+  else if (d->sens.voltage_raw > ROUND(16.0 / ADC_DISCRETE))
+  { //above normal
+   ce_state.bv_dev = 1, ce_state.bv_eds = 1;
+  }
+  else
+   ce_clear_error(ECUERROR_VOLT_SENSOR_FAIL);
+
+  ce_state.bv_tdc = 800; //init debouncing counter
+ }
+ else if (1==ce_state.bv_eds) //voltage is not OK
+ {
+  //use simple debouncing techique to eliminate errors during normal transients (e.g. switching ignition off) 
+  if (ce_state.bv_tdc)
+  {//state changed? If so, then rest state machine (start again)
+   if ((0==ce_state.bv_dev && d->sens.voltage_raw > ROUND(12.0 / ADC_DISCRETE)) ||
+       (1==ce_state.bv_dev && d->sens.voltage_raw < ROUND(16.0 / ADC_DISCRETE)))
+    ce_state.bv_eds = 0;
+    
+   --ce_state.bv_tdc;
+  }
+  else
+  { //debouncing counter is expired
+   //error if U > 4 and RPM > 2500 
+   if (d->sens.voltage_raw > ROUND(4.0 / ADC_DISCRETE) && d->sens.inst_frq > 2500)
+    ce_set_error(ECUERROR_VOLT_SENSOR_FAIL);
+   else
+    ce_clear_error(ECUERROR_VOLT_SENSOR_FAIL);
+
+   ce_state.bv_eds = 0; //reset state machine
+  }
+ }
 }
 
-
 //If any error occurs, the CE is light up for a fixed time. If the problem persists (eg corrupted the program code),
-//then the CE will be turned on continuously. At the start of programm the CE lights up for 0.5 seconds. for indicating
+//then the CE will be turned on continuously. At the start of program CE lights up for 0.5 seconds. for indicating
 //of the operability.
 //При возникновении любой ошибки, СЕ загорается на фиксированное время. Если ошибка не исчезает (например испорчен код программы),
 //то CE будет гореть непрерывно. При запуске программы СЕ загорается на 0.5 сек. для индицирования работоспособности.
@@ -216,10 +261,13 @@ void ce_clear_errors(void)
 void ce_init_ports(void)
 {
 #ifdef SECU3T /*SECU-3T*/
+#ifdef REV9_BOARD
+ PORTB|= _BV(PB2);
+#else
  PORTB&=~_BV(PB2);  //CE is ON (for checking)
- DDRB |= _BV(DDB2); //output for CE
+#endif
 #else         /*SECU-3*/
  PORTB|= _BV(PB2);
- DDRB |= _BV(DDB2);
 #endif
+ DDRB |= _BV(DDB2); //output for CE
 }

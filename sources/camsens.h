@@ -29,22 +29,35 @@
 
 #include <stdint.h>
 
-#ifdef PHASE_SENSOR
-
-typedef void (*CamCallback)(void);
-
+#if defined(PHASE_SENSOR) || defined(SECU3T)
 /** Initialization of state variables */
 void cams_init_state_variables(void);
 
 /** Initialization of cam module (Hardware & variables) */
 void cams_init_state(void);
 
-/** Set callbacks (edge & error callbacks)
- * p_edg_callback pointer to callback function to process edge event
- * p_err_callback pointer to callback function to process error event (cam sensor is not ready)
- */
-void cams_set_callbacks(CamCallback p_edg_callback, CamCallback p_err_callback);
+#ifdef SECU3T
+/**Checks for event(VR input) and automatically resets the flag
+ * \return 1 - event was pending, otherwise - 0 */
+uint8_t cams_vr_is_event_r(void);
 
+/**This function improves noise immunity. It will reset possible pending interrupt
+ * and enable it. */
+//#define cams_enable_vr_event(){
+// GIFR|=_BV(INTF0);
+// GICR|=_BV(INT0);
+//}
+
+/** Set edge type for VR input (Установка фронта для ДНО)
+ * \param edge_type 0 - falling (спадающий), 1 - rising (нарастающий)
+ */
+void cams_vr_set_edge_type(uint8_t edge_type);
+
+#endif //SECU3T
+
+#endif //defined(PHASE_SENSOR) || defined(SECU3T)
+
+#ifdef PHASE_SENSOR
 /** Sets threshold value (number of teeth between pulses) for errors checking
  * \param threshold number of teeth between pulses */
 void cams_set_error_threshold(uint8_t threshold);
@@ -63,7 +76,10 @@ uint8_t cams_is_error(void);
 /** Reset internal error flag */
 void cams_reset_error(void);
 
-#endif
+/**Checks for event(Hall input) and automatically resets the flag
+ * \return 1 - event was pending, otherwise - 0 */
+uint8_t cams_is_event_r(void);
+
+#endif //PHASE_SENSOR
 
 #endif //_CAMSENS_H_
-

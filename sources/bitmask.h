@@ -38,15 +38,28 @@
 /** Check y bit in the byte x (проверка бита y в байте x) */
 #define CHECKBIT(x,y) ((x) & (1<<(y)))
 
+/** Write specified v value to y bit in the byte x (запись значения v в бит y в байте x) */
+#define WRITEBIT(x, y, v) if (v)  SETBIT(x,y); else CLEARBIT(x, y);
+
 #ifdef LITTLE_ENDIAN_DATA_FORMAT //little-endian data store format (Intel)
  #define _AB(src,rel) *(((unsigned char*)&(src)+(rel)))                 /**< Access Nth byte in variable */
 #else                            //big-endian data store format (Motorola)
  #define _AB(src,rel) *(((unsigned char*)&(src)+sizeof((src))-1-(rel))) /**< Access Nth byte in variable */
 #endif
 
-/**Converts a bit number into a byte value. */
+/**Converts a bit number into a 1-byte value. */
 #ifndef _BV
  #define _BV(bit) (1 << (bit))
+#endif
+
+/**Converts a bit number into a 1-byte value with specifying of a bit value */
+#ifndef _CBV8
+ #define _CBV8(val,bit) (((uint8_t)val) << bit)
+#endif
+
+/**Converts a bit number into a 4-byte value with specifying of a bit value */
+#ifndef _CBV32
+ #define _CBV32(val,bit) (((uint32_t)val) << bit)
 #endif
 
 #endif //_BITMASK_H_
