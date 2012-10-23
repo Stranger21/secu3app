@@ -78,7 +78,7 @@ void control_engine_units(struct ecudata_t *d)
  vent_control(d);
 
  //Управление ЭМР (экономайзер мощностных режимов)
- fuelecon_control(d);
+ // fuelecon_control(d);
 
 #ifdef FUEL_PUMP
  //Controlling of electric fuel pump (Управление электробензонасосом)

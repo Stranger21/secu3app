@@ -186,19 +186,50 @@ void meas_take_discrete_inputs(struct ecudata_t *d)
 //считываем и сохраняем состояние газового клапана
 uint8_t sensgas = GET_GAS_VALVE_STATE();
 
-//процедура правильного переключения на газ в автоматическом режиме , если Т<10 то бензин
-// если больше то Газ , включаем газовые клапана , переключаем таблицы.
-if ((sensgas) && (d->sens.temperat >= TEMPERATURE_MAGNITUDE(10)))
+//процедура правильного переключения на газ в автоматическом режиме , 
+//если Т<10 то бензин
+// если больше то проверяем обороты двигателя , если выше 1800 то 
+//включаем газовые клапана , переключаем таблицы, если двигатель заглох , то процедура сбрасывается на бензин
+
+//проверка остановки двигателя
+if (!s_timer_is_action(engine_rotation_timeout_counter))
+{
+//проверка используется ли датчик температуры  
+if (d->param.tmp_use)
+{
+  if ((sensgas)&&(d->sens.temperat >= TEMPERATURE_MAGNITUDE(10))&&(d->sens.frequen >= 1800))
 {
   d->sens.gas = 1;
   fe_valve_state(1);
 }
 else
-{
+  if (!sensgas)
+  {
   d->sens.gas = 0;
   fe_valve_state(0);
+  }
 }
-
+else
+   {
+//если не используется датчик температуры то контролируем только состояние входа газовой кнопки и обороты     
+ if ((sensgas)&&(d->sens.frequen >= 1800))
+{
+  d->sens.gas = 1;
+  fe_valve_state(1);
+}
+else
+  if (!sensgas)
+  {
+  d->sens.gas = 0;
+  fe_valve_state(0);
+  }
+  }
+}//стоп двигатель зафиксирован
+else
+{
+  d->sens.gas = 0;
+  fe_valve_state(0); 
+}
  //переключаем тип топлива в зависимости от состояния газового клапана
 #ifndef REALTIME_TABLES
  if (d->sens.gas)

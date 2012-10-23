@@ -37,7 +37,7 @@
 
 void idlecon_init_ports(void)
 {
- IOCFG_INIT(IOP_IE, 1); //valve is turned on (клапан Ёѕ’’ включен)
+ IOCFG_INIT(IOP_IE, 0); //valve is turned on (клапан Ёѕ’’ включен)//у мен€ выключен так как использую только √аз
 }
 
 //Implementation of IE functionality. If throttle gate is closed AND frq > [up.threshold] OR
@@ -51,7 +51,7 @@ void idlecon_control(struct ecudata_t* d)
 {
  //if throttle gate is opened, then onen valve,reload timer and exit from condition
  //(если дроссель открыт, то открываем клапан, зар€жаем таймер и выходим из услови€).
- if (d->sens.carb)
+ if ((d->sens.carb)&&(d->sens.gas))// только с газом
  {
   d->ie_valve = 1;
   s_timer_set(epxx_delay_time_counter, d->param.shutoff_delay);
@@ -62,8 +62,9 @@ void idlecon_control(struct ecudata_t* d)
   if (d->sens.gas) //gas (газовое топливо)
    d->ie_valve = ((s_timer_is_action(epxx_delay_time_counter))
    &&(((d->sens.frequen > d->param.ie_lot_g)&&(!d->ie_valve))||(d->sens.frequen > d->param.ie_hit_g)))?0:1;
-  else //gasoline (бензин)
-   d->ie_valve = ((s_timer_is_action(epxx_delay_time_counter))
-   &&(((d->sens.frequen > d->param.ie_lot)&&(!d->ie_valve))||(d->sens.frequen > d->param.ie_hit)))?0:1;
+  else //gasoline (бензин) не использую карбюратор , поэтому на бензине выключаю Ёѕ’’
+   //d->ie_valve = ((s_timer_is_action(epxx_delay_time_counter))
+   //&&(((d->sens.frequen > d->param.ie_lot)&&(!d->ie_valve))||(d->sens.frequen > d->param.ie_hit)))?0:1;
+    d->ie_valve = 0;
  SET_IE_VALVE_STATE(d->ie_valve);
 }
