@@ -34,9 +34,18 @@ struct ecudata_t;
 /** Initialization of used I/O ports (инициализация используемых портов) */
 void pwrrelay_init_ports(void);
 
+/** Initialization of the module */
+void pwrrelay_init(void);
+
 /** Control of power relay (управление реле питания)
  * \param d pointer to ECU data structure
  */
 void pwrrelay_control(struct ecudata_t* d);
+
+/** Get System power state. When power management is not available
+ * this function will always return 1
+ * \return 1 - power is up, 0 - power is down
+ */
+uint8_t pwrrelay_get_state(void);
 
 #endif //_PWRRELAY_H_
