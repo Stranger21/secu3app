@@ -125,8 +125,8 @@ PGM_FIXED_ADDR_OBJ(fw_data_t fw_data, ".firmware_data") =
   0, 
 
   /**Fill coolant tempersture sensor lookup table*/
-  {400, 312, 262, 223, 191, 166, 142, 120, 99, 78, 56, 34, 10, -15, -54, -112},
-  154, 1708,
+  {400, 311, 260, 221, 189, 163, 140, 117, 95, 74, 52, 29, 3, -24, -67, -140},
+  124, 1744,
 
   /**reserved bytes*/
   {0}
